@@ -1,0 +1,12 @@
+read命令
+使用方法：
+read [参数] [变量名]
+
+参数：
+-p prompt:设置信息
+-t timeout:设置等待时间
+
+read -p "pleas input one num" -t 30 num
+
+read -p "pleas input two num" -t 10 num1 num2
+ 

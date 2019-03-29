@@ -1,0 +1,102 @@
+非交互式工具
+expect sshpass pssh
+
+expect安装
+yum install expect -y
+
+注：密码生成工具
+mkpasswd
+mkpasswd -l 15
+
+useradd tang001
+echo "1234567" | passwd --stdin tang001
+id tang001
+echo "tang001     ALL=(ALL)       NOPASSWD: ALL">>/etc/sudoers
+visudo -c
+su - tang001
+
+
+ssh-keygen -t dsa -P '' -f ~/.ssh/id_dsa >/dev/null 2>&1
+
+ssh-copy-id -i .ssh/id_dsa.pub man01@192.168.237.20
+
+
+
+
+
+
+
+expect脚本
+####################################33
+#!/usr/bin/expect
+if { $argc != 3 } {
+ send_user "usage:expect ssh_expect.exp user password host"
+}
+set user [lindex $argv 0]
+set host [lindex $argv 2]
+set password [lindex $argv 1]
+spawn ssh-copy-id -i /home/$user/.ssh/id_dsa.pub "-p 52113 $user@$host"
+expect {
+        "yes/no" {send "yes\r";exp_continue}
+        "*password" {send "$password\r"}
+}
+expect eof
+exit -onexit {
+    send_user "fenfa ssh key OK!\n"
+}
+
+
+
+ssh脚本
+##################################
+#!/bin/bash
+. /etc/init.d/functions
+host_list=`cat ~/servers.conf`
+ssh_user="tang001"
+ssh_w="1234567"
+check_up(){
+    if [ $1 -eq 0 ];then
+      action "$2" /bin/true
+    else
+      action "$2" /bin/false
+      exit 1
+    fi
+}
+ssh-keygen -t dsa -P '' -f ~/.ssh/id_dsa >/dev/null 2>&1
+check_up $? "create key"
+for host in $host_list
+do
+    /usr/bin/expect ~/ssh_expect.exp $ssh_user $ssh_w $host >/dev/null 2>&1
+    check_up $? "fen fa $host pubkey"
+done
+
+
+
+SSH批量安装vsftp
+#!/bin/bash
+. /etc/init.d/functions
+host_list=`cat ~/servers.conf`
+ssh_user="tang001"
+ssh_w="1234567"
+check_up(){
+    if [ $1 -eq 0 ];then
+      action "$2" /bin/true
+    else
+      action "$2" /bin/false
+      exit 1
+    fi
+}
+ssh-keygen -t dsa -P '' -f ~/.ssh/id_dsa >/dev/null 2>&1
+check_up $? "create key"
+for host in $host_list
+do
+    /usr/bin/expect ~/ssh_expect.exp $ssh_user $ssh_w $host >/dev/null 2>&1
+    check_up $? "fen fa $host pubkey"
+done
+for host in $host_list
+do
+    scp -P 52113 -rp /home/$ssh_user/scripts ${ssh_user}@${host}:~
+    check_up $? "fen fa $host pubkey"
+    ssh -p 52113 ${ssh_user}@${host} sudo /bin/sh ~/scripts/install.sh &
+    check_up $? "fen fa $host pubkey"
+done

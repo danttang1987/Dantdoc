@@ -1,0 +1,8 @@
+1、发邮件的语法
+mail -s "标题" 邮件地址<文件
+mail -s "20180100 back result" 375604454@qq.com < /backup.log
+echo "正文" | mail -s "20180100 back result" 375604454@qq.com
+
+
+2、修改/etc/mail.rc,在最后一行添加
+echo "set from=tht@tahr.com.cn smtp=smtp.exmail.qq.com smtp-auth-user=tht@tahr.com.cn smtp-auth-password=YVH1987idt smtp-auth=login" >> /etc/mail.rc

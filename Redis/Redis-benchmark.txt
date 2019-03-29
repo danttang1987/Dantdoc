@@ -1,0 +1,38 @@
+redis-benchmark
+命令可以做Redis基准性能测试
+
+-c n  代表多个客户端并发（默认为50）
+
+-n n   代表客户端的请求数（默认为100000）
+redis-benchmark -c 100 -n 20000 -p 6380
+====== SET ======                            ##什么命令
+  20000 requests completed in 0.92 seconds   ##20000个请求共用了多少秒
+  100 parallel clients                       ##
+  3 bytes payload                            ##有多少字节被加载
+  keep alive: 1                              ##
+                                             ##
+4.23% <= 1 milliseconds                      ##小于1毫秒的4.23%
+37.29% <= 2 milliseconds                     ##
+68.98% <= 3 milliseconds                     ##
+87.89% <= 4 milliseconds                     ##
+95.96% <= 5 milliseconds                     ##
+98.99% <= 6 milliseconds                     ##
+99.79% <= 7 milliseconds                     ##
+99.98% <= 8 milliseconds                     ##
+100.00% <= 8 milliseconds                    ##
+21762.79 requests per second                 ##每秒可以处理21672个get请求
+
+-q 只显示requests per second信息
+
+-r n 随机插入多个键
+
+
+-P  代表每个请求pipeline的数据量（默认为1 ）
+
+-k 代表客户端是否使用keepalive,0表示不使用，1表示使用（默认为1）
+
+-t 指定命令进行测试
+
+--csv 将结果按csv格式输出
+
+

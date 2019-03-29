@@ -1,0 +1,85 @@
+﻿#LNMP与LAMP缓存加速部署
+#PHP缓存加速有XCache、eAccelerator、ZendOpcache、APC
+#XCache为首选，支持新的PHP版本、效率高
+#eAccelerator为次选
+#ZendOpcache为PHP5.5以上自带，安装时通过--enable-opcache安装
+
+
+#eAccelerator的安装
+
+
+#配置环境变量
+echo 'export LC_ALL=C' >> /etc/profile
+tail -1 /etc/profile
+source /etc/profile
+echo $LC_ALL
+
+#安装perl相关软件
+yum install perl-devel -y
+
+cd /home/tang/tools
+wget https://github.com/downloads/eaccelerator/eaccelerator/eaccelerator-0.9.6.1.tar.bz2
+tar xf eaccelerator-0.9.6.1.tar.bz2
+cd eaccelerator-0.9.6.1
+/application/php/bin/phpize
+./configure --enable-eaccelerator=shared --with-php-config=/application/php/bin/php-config
+make && make install
+
+
+#XCache的安装
+cd /home/tang/tools
+wget http://xcache.lighttpd.net/pub/Releases/3.2.0/xcache-3.2.0.tar.gz
+tar xf xcache-3.2.0.tar.gz
+cd xcache-3.2.0
+/application/php/bin/phpize
+./configure --enable-xcache --with-php-config=/application/php/bin/php-config
+make && make install
+
+
+
+#ZendOpcache的安装
+#ZendOpcache在5.5之前的版本需要安装，在5.5之后的版本只需要在编译是使用--enable-opcache即可；以下是5.3安装
+cd /home/tang/tools
+wget http://pecl.php.net/get/zendopcache-7.0.5.tgz
+tar xf zendopcache-7.0.5.tgz
+cd zendopcache-7.0.5
+/application/php/bin/phpize
+./configure --enable-opcache --with-php-config=/application/php/bin/php-config
+make && make install
+
+#memcached缓存PHP扩展插件安装
+cd /home/tang/tools
+wget http://pecl.php.net/get/memcache-2.2.7.tgz
+tar xf memcache-2.2.7.tgz
+cd memcache-2.2.7
+/application/php/bin/phpize
+./configure --enable-memcache --with-php-config=/application/php/bin/php-config
+make && make install
+
+
+#PDO_Mysql扩展插件安装
+
+cd /home/tang/tools
+wget http://pecl.php.net/get/PDO-1.0.3.tgz
+tar xf PDO-1.0.3.tgz
+cd PDO-1.0.3
+/appliction/php/bin/phpize
+./configure --with-php-config=/appliction/php/bin/php-config --with-pdo-mysql=mysqlnd
+make && make install
+
+#安装imagick扩展模块
+cd /home/tang/tools
+wget https://imagemagick.org/download/ImageMagick.tar.gz
+tar xf ImageMagick.tar.gz
+cd ImageMagick-7.0.8-14
+./configure
+make && make install
+
+
+cd /home/tang/tools
+wget http://pecl.php.net/get/imagick-3.4.3.tgz
+tar xf imagick-3.4.3.tgz
+cd imagick-3.4.3
+/appliction/php/bin/phpize
+./configure --with-php-config=/appliction/php/bin/php-config
+make && make install

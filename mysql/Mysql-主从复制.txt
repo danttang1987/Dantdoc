@@ -1,0 +1,133 @@
+#如果要求数据一至性需要在主库上配置如下两个参数：
+#innodb_flush_log_at_trx_commit=1
+#sync_binlog=1
+
+#mysql主从复制
+#1、在主库上开log-bin ,在主的my.cnf上添加如下
+[mysqld]
+log-bin = /data/3307/mysql-bin
+server-id = 1
+
+#2、检查mysql_id和log_bin配置
+mysql -uroot -p123.com -S /data/3307/mysql.sock -e "show variables like 'server_id'"
+mysql -uroot -p123.com -S /data/3307/mysql.sock -e "show variables like 'log_bin'"
+
+
+#3、创建mysql复制的帐户
+mysql -uroot -p123.com -S /data/3307/mysql.sock -e "grant replication slave on *.* to 'rep'@'db03' identified by '1234.com'"
+mysql -uroot -p123.com -S /data/3307/mysql.sock -e "select user,host from mysql.user;"
+mysql -uroot -p123.com -S /data/3307/mysql.sock -e "show grants for rep@'192.168.237.%';"
+
+#4、备份数据库
+#先要锁表
+5.5
+mysql -uroot -p123.com -S /data/3307/mysql.sock -e "flush table with read lock;"
+5.1
+mysql -uroot -p123.com -S /data/3307/mysql.sock -e "flush tables with read lock;"
+
+以下两个参数可以控制锁表的超时时间（默认为8小时）
+interactive_timeout
+wait_timeout
+
+#重新开一个窗口进行备份，在备份前需要看Binlog的位置
+mysql -uroot -p123.com -S /data/3307/mysql.sock -e "show master status;"
+#	+------------------+----------+--------------+------------------+
+#	| File             | Position | Binlog_Do_DB | Binlog_Ignore_DB |
+#	+------------------+----------+--------------+------------------+
+#	| mysql-bin.000005 |      262 |              |                  |
+#	+------------------+----------+--------------+------------------+
+mkdir -p /server/backup
+mysqldump -uroot -p123.com -S /data/3307/mysql.sock --events -A -B | gzip >/server/backup/mysql_back_`date +%F`.sql.gz
+## 或者在备份时添加-x --master-data=1 则不需要记录Binlog日志的位置
+mysqldump -uroot -p123.com -S /data/3307/mysql.sock -x --master-data=1 --events -A -B | gzip >/server/backup/mysql_back_`date +%F`.sql.gz
+
+ll /server/backup/
+#备份完成后在确认binlog位置是否一样,确保期间没有数据写入;
+mysql -uroot -p123.com -S /data/3307/mysql.sock -e "show master status;"
+#在解锁数据库存
+mysql -uroot -p123.com -S /data/3307/mysql.sock -e "unlock tables;"
+
+#5、在从库上确认server_id和binlog是否关闭
+#Binlog日志有两情况需要开启（1、在从库上做备份；2、做级联主从复制时），否则建议关闭Binlog;
+cat /data/3308/my.cnf | grep server-id
+cat /data/3308/my.cnf | grep log-bi
+mysql -uroot -p123.com -S /data/3308/mysql.sock -e "show variables like 'server_id'"
+mysql -uroot -p123.com -S /data/3308/mysql.sock -e "show variables like 'log_bin'"
+#+---------------+-------+
+#| Variable_name | Value |
+#+---------------+-------+
+#| server_id     | 20    |
+#+---------------+-------+
+#[root@db02 3308]# mysql -uroot -p123.com -S /data/3308/mysql.sock -e "show variables like 'log_bin'"
+#+---------------+-------+
+#| Variable_name | Value |
+#+---------------+-------+
+#| log_bin       | OFF   |
+#+---------------+-------+
+#[root@db02 3308]# 
+
+#5、将主库中的mysqldump导出的数据恢复到从库中；
+cd /server/backup
+gzip -d mysql_back_`date +%F`.sql.gz
+mysql -uroot -p123.com -S /data/3308/mysql.sock < mysql_back_`date +%F`.sql
+mysql -uroot -p123.com -S /data/3308/mysql.sock -e "CHANGE MASTER TO 
+MASTER_HOST='192.168.237.21',
+MASTER_PORT=3307,
+MASTER_USER='rep',
+MASTER_PASSWORD='1234.com',
+MASTER_LOG_FILE='mysql-bin.000007',
+MASTER_LOG_POS=107;"
+
+mysql -uroot -p123.com -S /data/3308/mysql.sock -e "start slave;"
+mysql -uroot -p123.com -S /data/3308/mysql.sock -e "show slave status\G;"
+
+
+mysql -uroot -p123.com -S /data/3308/mysql.sock -e "show slave status\G;" | egrep -i "IO_running|SQL_running|_Behind_master"
+##            Slave_IO_Running: Yes
+##           Slave_SQL_Running: Yes
+##       Seconds_Behind_Master: 0
+
+#Replication and Binary Logging Option and Variable Reference
+
+
+问题一：
+关于复制用户权限问题，如果配置有host或DNS，需要将授权主机改为主机名
+
+
+
+
+
+
+  abort-slave-event-count: Option used by mysql-test for debugging and testing of replication
+? Com_change_master: Count of CHANGE MASTER TO statements
+? Com_show_master_status: Count of SHOW MASTER STATUS statements
+? Com_show_new_master: Count of SHOW NEW MASTER statements
+? Com_show_slave_hosts: Count of SHOW SLAVE HOSTS statements
+? Com_show_slave_status: Count of SHOW SLAVE STATUS statements
+? Com_slave_start: Count of START SLAVE statements
+? Com_slave_stop: Count of STOP SLAVE statements
+
+以下是与主从同步相关的参数
+  log-slave-updates: Tells the slave to log the updates performed by its SQL thread to its own binary log
+  relay-log: The location and base name to use for relay logs
+? relay-log-index: The location and name to use for the file that keeps a list of the last relay logs
+? relay-log-info-file: The location and name
+  relay_log_space_limit: Maximum space to use for all relay logs
+? replicate-do-db: Tells the slave SQL thread to restrict replication to the specified database
+? replicate-ignore-table: Tells the slave SQL thread not to replicate to the specified table
+  skip-slave-start: If set, slave is not autostarted
+  sync_binlog: Synchronously flush binary log to disk after every #th event
+? sync_master_info: Synchronize master.info to disk after every #th event
+? sync_relay_log: Synchronize relay log to disk after every #th event
+? sync_relay_log_info: Synchronize relay.info file to disk after every #th event
+? binlog_format: Specifies the format of the binary log
+  binlog-row-event-max-size: Binary log max event size
+? Binlog_cache_disk_use: Number of transactions that used a temporary file instead of the binary log cache
+? binlog_cache_size: Size of the cache to hold the SQL statements for the binary log during a transaction
+? Binlog_cache_use: Number of transactions that used the temporary binary log cache
+
+
+? replicate-do-table: Tells the slave SQL thread to restrict replication to the specified table
+? replicate-ignore-db: Tells the slave SQL thread not to replicate to the specified database
+  binlog-do-db: Limits binary logging to specific databases
+? binlog-ignore-db: Tells the master that updates to the given database should not be logged to the binary log

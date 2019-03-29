@@ -1,0 +1,210 @@
+#安装Keeplived
+yum install keepalived -y
+/etc/init.d/keepalived start
+#Keepalived配置文件
+ls -l /etc/keepalived/keepalived.conf
+
+#全局配置部分：主要设置故障通知机制和RouterID
+global_defs {
+   notification_email {
+     acassen@firewall.loc
+     failover@firewall.loc
+     sysadmin@firewall.loc
+   }
+   notification_email_from Alexandre.Cassen@firewall.loc
+   smtp_server 192.168.200.1
+   smtp_connect_timeout 30
+   router_id LVS_DEVEL
+}
+#router_id在一个局域网中应该是唯一的；
+
+#VRRP实例定义区块
+#定义具体服务的实例配置，包括主备状态、接口、优先级、认证方式和IP
+vrrp_instance VI_1 {
+    state MASTER
+    interface eth0
+    virtual_router_id 51
+    priority 100
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass 1111
+    }
+    virtual_ipaddress {
+        192.168.200.16
+        192.168.200.17
+        192.168.200.18
+    }
+}
+
+
+#修改后：
+vrrp_instance VI_1 {
+    state MASTER
+    interface eth0
+    virtual_router_id 55
+    priority 150
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass tht123
+    }
+    virtual_ipaddress {
+        192.168.237.17/24 dev eth0 label eth0:1
+    }   
+} 
+
+#配置LB02
+global_defs {
+   notification_email {
+     acassen@firewall.loc
+     failover@firewall.loc
+     sysadmin@firewall.loc
+   }
+   notification_email_from Alexandre.Cassen@firewall.loc
+   smtp_server 192.168.200.1
+   smtp_connect_timeout 30
+   router_id lb02
+}
+
+vrrp_instance VI_1 {
+    state MASTER
+    interface eth0
+    virtual_router_id 55
+    priority 150
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass 1234
+    }
+    virtual_ipaddress {
+        192.168.237.17/24 dev eth0 label eth0:1
+    }
+}
+
+#配置LB01
+global_defs {
+   notification_email {
+     acassen@firewall.loc
+     failover@firewall.loc
+     sysadmin@firewall.loc
+   }
+   notification_email_from Alexandre.Cassen@firewall.loc
+   smtp_server 192.168.200.1
+   smtp_connect_timeout 30
+   router_id lb01    ##需要在全网保持唯一
+}
+
+vrrp_instance VI_1 {
+    state BACKUP
+    interface eth0
+    virtual_router_id 55   ##需要在配置文件中保持唯，主备之间一对实例需要保持一至；
+    priority 100
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass 1234
+    }
+    virtual_ipaddress {
+        192.168.237.17/24 dev eth0 label eth0:1
+    }
+}
+
+#问题一、在配置Keepalived配置文件时，将Virtual_ipaddress后的内容配置错误，导致主结点宕机后，备节点无法接管虚拟IP;
+
+#解决网卡地址不存在问题
+echo "net.ipv4.ip_nonlocal_bind = 1" >> /etc/sysctl.conf
+
+
+#解决Nginxe服务宕机后Keepalived切换
+#方法一、写守护进行(可进行优化)
+mkdir -p /server/scripts
+cat > check_nginx.sh <<EOF
+#!/bin/bash
+while true
+do
+	if [ \`netstat -lnutp | grep nginx|wc -l\` -ne 1 ] ;then
+		/etc/init.d/keepalived stop
+	fi
+	sleep 5
+done
+EOF
+
+sh check_nginx.sh &
+
+#方法二、使用Keepalive服务进行监控
+cat > check_nginx_proxy.sh <<EOF
+#!/bin/bash
+if [ \`netstat -lnutp | grep nginx|wc -l\` -ne 1 ] ;then
+    /etc/init.d/keepalived stop
+fi
+EOF
+chmod +x check_nginx_proxy.sh
+
+#修改配置文件
+sed -i '/vrrp_instance VI_1/ivrrp_script chk_nginx_proxy {\nscript "/server/scripts/check_nginx_proxy.sh"\ninterval 2\nweight 2\n},G' /etc/keepalived/keepalived.conf
+
+##vrrp_script chk_nginx_proxy {
+##script "/server/scripts/check_nginx_proxy.sh"
+##interval 2
+##weight 2
+##}
+##完整配置如下：
+global_defs {
+   notification_email {
+     acassen@firewall.loc
+     failover@firewall.loc
+     sysadmin@firewall.loc
+   }
+   notification_email_from Alexandre.Cassen@firewall.loc
+   smtp_server 192.168.200.1
+   smtp_connect_timeout 30
+   router_id lb01
+}
+
+vrrp_script chk_nginx_proxy {                           ##新加
+script "/server/scripts/check_nginx_proxy.sh"           ##新加
+interval 2                                              ##新加
+weight 2                                                ##新加
+}
+vrrp_instance VI_1 {
+    state BACKUP
+    interface eth0
+    virtual_router_id 55
+    priority 100
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass 1234
+    }
+    virtual_ipaddress {
+        192.168.237.17/24 dev eth0 label eth0:1
+    }
+    track_script {         ##新加
+    chk_nginx_proxy        ##新加
+    }                      ##新加
+}
+
+    track_script {
+    chk_nginx_proxy
+    }
+	
+
+#解闷多组Keepalived服务器在一个局网中冲突
+#1、不同的组使用不一样的多播地址,默认是224.0.0.18
+global_defs {
+router_id LVS_19
+vrrp_mcast_group4 224.0.0.19
+}
+#2、不同的实例使用不同的密码认证
+
+
+#配置keepalived服务的日志，默认在/etc/log/messages中
+sed -i '/KEEPALIVED_OPTIONS=/s#KEEPALIVED_OPTIONS="-D"#KEEPALIVED_OPTIONS="-D -d -S 0"#g' /etc/sysconfig/keepalived
+cat >> /etc/rsyslog.conf <<EOF
+#keepalived
+local0.* /var/log/keepalived.log
+EOF
+/etc/init.d/rsyslog restart
+
+/etc/init.d/keepalived restart

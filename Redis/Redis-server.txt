@@ -1,0 +1,4 @@
+redis-server
+
+redis-server除了可以启动Redis外，还有一个参数 --test-memory N用于测试操作系统是否稳定，
+redis-server --test-memory 2048

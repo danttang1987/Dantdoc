@@ -1,0 +1,53 @@
+echo 'include "/etc/named/named.conf.local";'>>/etc/named.conf
+mkdir /etc/named/zones
+cat >/etc/named/named.conf.local <<EOF
+zone "zishan.com" {
+    type master;
+    file "/etc/named/zones/db.zishan.com"; # zone file path
+};
+zone "237.168.192.in-addr.arpa" {
+    type master;
+    file "/etc/named/zones/db.192.168.237";  # 192.168.237.0/24 subnet
+};
+EOF
+
+cat >/etc/named/zones/db.zishan.com <<EOF
+$TTL	604800
+@       IN      SOA   @   cobbler.zishan.com. (
+		      3     ; Serial
+		 604800     ; Refresh
+		  86400     ; Retry
+		2419200     ; Expire
+		 604800 )   ; Negative Cache TTL
+
+; name servers - NS records
+		IN      NS      cobbler.zishan.com.
+
+; name servers - A records
+cobbler.zishan.com.          IN      A      192.168.237.200
+EOF
+
+
+cat >/etc/named/zones/db.192.168.237 <<EOF
+$TTL	604800
+@       IN      SOA   @   cobbler.zishan.com. (
+	      3         ; Serial
+	 604800         ; Refresh
+	  86400         ; Retry
+	2419200         ; Expire
+	 604800 )       ; Negative Cache TTL
+
+; name servers - NS records
+			IN      NS      cobbler.zishan.com.
+
+; PTR Records
+200 IN      PTR     cobbler.zishan.com.    ; 192.168.237.200
+EOF
+
+named-checkconf
+
+named-checkzone 237.168.192.in-addr.arpa /etc/named/zones/db.192.168.237
+
+
+
+systemctl start named-chroot

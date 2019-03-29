@@ -1,0 +1,16 @@
+判断字符串是否为数字
+[ -n "`echo 123abc |sed 's/[0-9]//g'`" ] && echo char || echo int
+[ -z "`echo 123 |sed 's/[0-9]//g'`" ] && echo int || echo char
+
+num=1234com
+[ -n "`echo ${num//[0-9]/}`" ] && echo char || echo int
+
+
+[ -n ${num:=123} -a "$num" = "${num//[^0-9]/}" ] && echo int     有问题如变量没有定义或为空
+
+
+expr $num + 1 >/dev/null 2>&1
+echo $?
+
+
+[[ "$num" =~ "^[0-9]+$" ]] && echo int || echo char   有问题

@@ -1,0 +1,55 @@
+[tht@d03 shell]$ ETT=123
+[tht@d03 shell]$ awk 'BEGIN {print $ETT}'
+
+[tht@d03 shell]$ awk 'BEGIN {print "$ETT"}'
+$ETT
+[tht@d03 shell]$ awk 'BEGIN {print '$ETT'}'
+123
+[tht@d03 shell]$ awk 'BEGIN {print "'$ETT'"}'
+123
+[tht@d03 shell]$ 
+
+
+
+
+
+[tht@d03 shell]$ ETT='abcd'
+[tht@d03 shell]$ awk 'BEGIN {print "$ETT"}'
+$ETT
+[tht@d03 shell]$ awk 'BEGIN {print $ETT}'
+
+[tht@d03 shell]$ awk 'BEGIN {print '$ETT'}'
+
+[tht@d03 shell]$ awk 'BEGIN {print "'$ETT'"}'
+abcd
+[tht@d03 shell]$ 
+
+
+
+[tht@d03 shell]$ ETT="ddc"
+[tht@d03 shell]$ awk 'BEGIN {print $ETT}'
+
+[tht@d03 shell]$ awk 'BEGIN {print "$ETT"}'
+$ETT
+[tht@d03 shell]$ awk 'BEGIN {print '$ETT'}'
+
+[tht@d03 shell]$ awk 'BEGIN {print "'$ETT'"}'
+ddc
+[tht@d03 shell]$
+
+
+[tht@d03 shell]$ ETT=`pwd`
+[tht@d03 shell]$ awk 'BEGIN {print $ETT}'
+
+[tht@d03 shell]$ awk 'BEGIN {print "$ETT"}'
+$ETT
+[tht@d03 shell]$ awk 'BEGIN {print '$ETT'}'
+awk: 致命错误: 试图除0
+[tht@d03 shell]$ awk 'BEGIN {print "'$ETT'"}'
+/home/tht/shell
+[tht@d03 shell]$ 
+
+
+总结：在awk中使用sell中的变量需要使用双引号中包括单引号，如下awk 'BEGIN {print "'$ETT'"}'，可以解决所有问题，
+但是，如果变量的结果中的空格，一样会报错，目前还没有找到解决方法
+

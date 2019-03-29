@@ -1,0 +1,64 @@
+优化步骤：
+
+	修改ip地址、网关、主机名、DNS等
+	关闭selinux，清空iptables
+	添加普通用户并进行sudo授权管理
+	优化history
+	更新yum源及必要软件安装
+	定时自动更新服务器时间
+	精简开机自启动服务
+	定时自动清理/var/spool/clientmqueue/目录垃圾文件，放置inode节点被占满
+	变更默认的ssh服务端口，禁止root用户远程连接
+	锁定关键文件系统
+	调整文件描述符大小
+	调整字符集，使其支持中文
+	去除系统及内核版本登录前的屏幕显示
+	内核参数优化
+
+修改IP等配置
+	[root@localhost ~]# vi /etc/sysconfig/network-scripts/ifcfg-eth0
+	DEVICE=eth0         #网卡名字
+	BOOTPROTO=static    #静态IP地址获取状态 如：DHCP表示自动获取IP地址
+	IPADDR=192.168.1.113            #IP地址
+	NETMASK=255.255.255.0           #子网掩码
+	ONBOOT=yes#引导时是否激活
+	GATEWAY=192.168.1.1
+	[root@localhost ~]# cat /etc/sysconfig/network-scripts/ifcfg-eth0
+	DEVICE=eth0
+	BOOTPROTO=static
+	IPADDR=192.168.1.113
+	NETMASK=255.255.255.0
+	ONBOOT=yes
+	GATEWAY=192.168.1.1
+	[root@localhost ~]# vi /etc/sysconfig/network
+	HOSTNAME=c64     #修改主机名，重启生效
+	GATEWAY=192.168.1.1    #修改默认网关,如果上面eth0里面不配置网关的话，默认就使用这里的网关了。
+	[root@localhost ~]# cat /etc/sysconfig/network
+	HOSTNAME=c64
+	GATEWAY=192.168.1.1
+	我们也可以用  hostnamec64  来临时修改主机名，重新登录生效
+	修改DNS
+	[root@localhost ~]# vi /etc/resolv.conf   #修改DNS信息
+	nameserver 114.114.114.114
+	nameserver 8.8.8.8
+	[root@localhost ~]# cat /etc/resolv.conf  #查看修改后的DNS信息
+	nameserver 114.114.114.114
+	nameserver 8.8.8.8
+	[root@localhost ~]# service network restart   #重启网卡，生效
+	重启网卡，也可以用下面的命令
+	[root@localhost ~]# /etc/init.d/network restart
+
+sed –i ‘s/SELINUX=enforcing/SELINUX=disabled/g’ /etc/selinux/config
+iptables –F
+/etc/init.d/iptables save
+useradd tht
+echo "123456"|passwd --stdin 123.com && history –c
+#优化history
+cat <<EOF >> /etc/bashrc
+export HISTTIMEFORMAT="%F %T"
+export HISTCONTROL=ignorespace
+EOF
+#sudo??????
+sed -i '/^root/atht   ALL=(ALL)    NOPASSWD: ALL' /etc/sudoers
+##yun更新
+mv /etc/yum.repos.d/CentOS-Base.repo{,.bak}

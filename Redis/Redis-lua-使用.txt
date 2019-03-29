@@ -1,0 +1,57 @@
+Redis与Lua
+
+1、在Redis中使用Lua
+    使用脚本有两种方式eval和evalsha
+	eval 脚本内容 key个数 key列表 参数列表
+	eval 'return "hello " .. KEYS[1] .. ARGV[1]' 1 tang hongtao
+	
+	如果脚本很长，可以使用redis-cli --eval 直接执行文件
+	
+	evalsha 首先将脚本加载到服务端，得到该脚本的sha校验和，在使用evalsha命令时直接使用sha校验可以执行指定的脚本；
+	使用script load命令将脚本加载到Redis内存中，如下
+	[root@redis01 ~]# redis-cli -p 6380 script load "$(cat lua_get.lua)"
+    "7413dc2440db1fea7c0a0bde841fa68eefaf149c"
+	
+	127.0.0.1:6380> evalsha 7413dc2440db1fea7c0a0bde841fa68eefaf149c 1 tanghongtao 25
+    "hello tanghongtao25"
+	
+2、Lua的Redis API
+   可以在Lua中使用redis.call()函数来实现对Redis的访问
+   例如：
+   eval 'return redis.call("get",KEYS[1])' 1 key:000000015466
+   
+   KEYS[1]需要大写
+   
+    除了使用redis.call之外还可以使用redis.pcall，他们的不同之处在于redis.call在执行失败后脚本结束返回错误，而redis.pcall执行会忽略错误继续运行。
+	
+	
+特点：
+Lua脚本在Redis中是原子执行，执行过程中不会插入其他命令；
+Lua脚本可以帮助开发人员和运维人员定制自己的命令；
+Lua脚本可以将多条命令一次打包，有效地减少网络开销；
+
+案例一：
+local mylist = redis.call("lrange", KEYS[1], 0, -1)
+local count = 0
+for index,key in ipairs(mylist)
+do
+    redis.call("incr",key)
+	count = count + 1
+end
+return count
+
+
+对list中的所有值对应的字符串Key的值加1
+
+
+
+
+
+管理Redis脚本
+
+1、script load       ###将脚本加载到内存
+2、script exists     ###检查脚本是否在内存  script exists [hash1]
+3、script flush      ###清空所有Lua脚本
+4、script kill       ###杀掉正在执行的脚本
+
+

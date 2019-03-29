@@ -1,0 +1,56 @@
+利用shell函数开发企业级URL检测
+#!/bin/bash
+function usage() {
+	echo "Usage:$0 URL"
+	exit 1
+}
+
+function chkurl() {
+	wget -q --spider -o /dev/null --tries=1 -T 5 $1
+	if [ $? -eq 0 ]
+	then
+		echo "$1 is yes"
+	else
+		echo "$1 is no"
+	fi
+}
+
+function main() {
+	if [ $# -ne 1 ]
+		then
+		usage
+	fi
+	chkurl $1
+}
+
+main $*
+
+
+
+优化后
+#!/bin/bash
+. /etc/init.d/functions
+function usage() {
+	echo "Usage:$0 URL"
+	exit 1
+}
+
+function chkurl() {
+	wget -q --spider -o /dev/null --tries=1 -T 5 $1
+	if [ $? -eq 0 ]
+	then
+		action "$1 is yes"    /bin/true
+	else
+		action "$1 is no"     /bin/false
+	fi
+}
+
+function main() {
+	if [ $# -ne 1 ]
+		then
+		usage
+	fi
+	chkurl $1
+}
+
+main $*

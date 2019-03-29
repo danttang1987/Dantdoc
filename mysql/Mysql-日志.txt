@@ -1,0 +1,53 @@
+mysql日志
+1、error日志（error log）
+[mysqld_safe]
+open-files-limit = 8192
+pid-file = /data/3307/mysql.pid
+log-error = /data/3307/mysql_tht3307.err
+
+2、普通查询日志  (general query log)
+
+mysql> show variables like '%general_log%';
++------------------+--------------------------+
+| Variable_name    | Value                    |
++------------------+--------------------------+
+| general_log      | OFF                      |
+| general_log_file | /data/3307/data/db03.log |
++------------------+--------------------------+
+
+3、慢查询日志  (slow query log)
+mysql> show variables like '%slow%';      
++---------------------+-------------------------------+
+| Variable_name       | Value                         |
++---------------------+-------------------------------+
+| log_slow_queries    | ON                            |
+| slow_launch_time    | 2                             |
+| slow_query_log      | ON                            |
+| slow_query_log_file | /data/3307/data/db03-slow.log |
+| log_queries_not_using_indexes | OFF  
+
+4、二进制日志  (binary log)
+| log_bin                                 | ON                   |
+| sql_log_bin                             | ON                   |   临时不开启Binlog
+
+
+Binlog有三种模式
+1、statement level模式
+    优点：
+	1、性能好，日志少
+	
+	缺点：
+	有上下文依赖，在有些功能(存储过程、触发器)上同步可以能有问题
+
+2、row level模式
+    日志被记录成每一行修改的模式
+    优点：
+    1、记录详细
+    1、可以解决存储过程、触发器statement leve下不能同步；
+    
+    缺点：
+    1、性能差、使用空间大
+
+3、MIXED混合模式
+
+  | binlog_format                           | MIXED                |

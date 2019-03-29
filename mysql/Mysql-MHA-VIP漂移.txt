@@ -1,0 +1,47 @@
+MHA  VIP漂移
+有两种方式
+
+
+修改MHA配置文件
+[server default]
+manager_log=/var/log/mha/app1/app1.log
+manager_workdir=/var/log/mha/app1
+master_binlog_dir=/application/mysql/data
+master_ip_failover_script=/usr/local/bin/master_ip_failover   #增加
+password=123.com
+ping_interval=2
+repl_password=123.comm
+repl_user=rep
+ssh_port=52113
+ssh_user=root
+user=mha
+
+
+cd /usr/local/bin/
+cp /home/tht/mha4mysql-manager-master/samples/scripts/master_ip_failover ./
+
+并在原有脚本中增加如下内容
+完整内容刚相应脚本
+
+my $vip = '192.168.237.35/24';
+my $key = '1';
+my $ssh_start_vip = "/sbin/ifconfig eth0:$key $vip";
+my $ssh_stop_vip = "/sbin/ifconfig eht0:$key down";
+
+
+
+nohup masterha_manager --conf=/etc/mha/app1.cnf --remove_dead_master_conf --ignore_last_failover < /dev/null >/var/log/mha/app1/manager.log 2>&1 &
+
+
+
+
+
+
+
+
+
+
+
+
+
+

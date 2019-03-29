@@ -1,0 +1,36 @@
+29、应用监控
+
+
+Nginx示例：
+
+yum install -y gcc glibc gcc-c++ pcre-devel openssl-devel
+
+mkdir /app/src -p
+cd /app/src
+wget http://
+useradd -s /sbin/noloin -M www
+
+./configure --prfeix=/app/nginx-1.10.1\
+--user=www --group=www\
+--with-http_ssl_module\
+--with-http_stub_status_module
+
+make && make install
+
+ls -s /app/nginx-1.10.1 /app/nginx
+
+
+/app/nginx/sbin/nginx -t
+/app/nginx/sbin/nginx
+
+vim /app/nginx/conf/nginx.conf/nginx
+
+local /nginx-status {
+	stub_status on;
+	access_log off;
+	allow 192.168.237.200/24;
+	deny all;
+}
+
+
+

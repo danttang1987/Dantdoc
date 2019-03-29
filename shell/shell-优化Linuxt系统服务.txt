@@ -1,0 +1,34 @@
+shell-优化Linux系统服务
+方法一：for
+LANG=en
+for svrn in `chkconfig --list| grep 3:on|awk '{print $1}'`
+do
+	chkconfig --level 3 $svrn off
+done
+
+for svrn in crond network rsyslog sshd sysstat
+do
+	chkconfig --level 3 $svrn on
+done
+
+
+
+方法二：for
+LANG=en
+for svrn in `chkconfig --list| grep 3:on|awk '{print $1}' | grep -Ev "crond|network|rsyslog|sshd|sysstat"`
+do
+	chkconfig --level 3 $svrn off
+done
+
+
+方法三：不用for
+LANG=en
+chkconfig --list | grep 3:on | awk '{print $1}' | grep -Ev "crond|network|rsyslog|sshd|sysstat" | awk '{print "chkconfig --level 3",$1,"off"}'|bash
+
+
+
+方法四：不用for
+LANG=en
+chkconfig --list | grep 3:on | awk '{print $1}' | grep -Ev "crond|network|rsyslog|sshd|sysstat" | sed -r 's/(.*)/chkconfig --level 3 \1 off/'|bash
+
+

@@ -1,0 +1,585 @@
+python 入门
+
+
+[tht@d03 screpts]$ python
+Python 2.6.6 (r266:84292, Aug 18 2016, 15:13:37) 
+[GCC 4.4.7 20120313 (Red Hat 4.4.7-17)] on linux2
+Type "help", "copyright", "credits" or "license" for more information.
+>>> print "hello work"
+hello work
+
+
+[tht@d03 screpts]$ cat helloword.py 
+#!/usr/bin/env python
+print "hello word"
+
+[tht@d03 screpts]$ cat p1.py 
+#!/usr/bin/env python
+principl = 100
+rate = 0.05
+numyears = 5
+year = 1
+while year <= numyears:
+    principl = principl * (1 + rate)
+    print year, principl
+    year += 1
+	
+	
+[tht@d03 screpts]$ cat p2.py 
+#!/usr/bin/env python
+principl = 100; rate = 0.05; numyears = 5; year = 1
+while year <= numyears:
+    principl = principl * (1 + rate)
+    print year, principl
+    year += 1
+	
+###################
+#格式化输出
+print "%3d %0.2f" % (year, principl)
+print format(year,"3d"),format(principl,"0.2f")
+print "{0:3d} {1:0.2f}".format(year,principl)
+	
+[tht@d03 screpts]$ cat p3.py 
+#!/usr/bin/env python
+principl = 100; rate = 0.05; numyears = 5; year = 1
+while year <= numyears:
+    principl = principl * (1 + rate)
+    print "%3d %0.2f" % (year, principl)
+    year += 1
+
+
+###############################
+条件
+
+[tht@d03 screpts]$ cat p4.py 
+#!/usr/bin/env python
+a=3
+b=5
+if a < b:
+    print "computer says Yes"
+else:
+    print "computer says no"
+	
+	
+	
+[tht@d03 screpts]$ cat p4.py 
+#!/usr/bin/env python
+a=3
+b=5
+if a < b:
+    pass    #什么也不执行
+else:
+    print "computer says no"	
+	
+
+############
+and or not及换行 \
+
+
+[tht@d03 screpts]$ cat p4.py 
+#!/usr/bin/env python
+a=3
+b=5
+product="game"
+type="pirate memory"
+if product == "game" and type == "pirate memory" \
+                     and not (a > 4 or b < 4 ):
+#    print "computer says Yes"
+    pass
+else:
+    print "computer says no"
+	
+
+
+##############################3
+if elif
+
+[tht@d03 screpts]$ cat p4.py 
+#!/usr/bin/env python
+a=9
+b=5
+product="game"
+type="pirate memory"
+#if product == "game" and type == "pirate memory" \
+#                     and not (a > 4 or b < 4 ):
+if a > 10:
+#    print "computer says Yes"
+    pass
+elif a > 9:
+    print "computer says no"
+elif a > 8:
+    print "a>8"
+elif a > 7:
+    print "a>7"
+elif a > 6:
+    print "a>6"
+elif a > 5:
+    print "a>5"
+[tht@d03 screpts]$ python p4.py 
+a>8
+
+
+[tht@d03 screpts]$ python p5.py 
+t is tang
+[tht@d03 screpts]$ cat p5.py 
+#!/usr/bin/env python
+t = "tanttangtang"
+if "tang" in t:
+    print "t is tang"
+else:
+    print "t is not tang"
+	
+####################################3
+open()文件的输入和输出
+
+以下两种方法迭代文件中的内容	
+[tht@d03 screpts]$ cat p6.py 
+#!/usr/bin/env python
+f = open("foo.txt")
+line = f.readline()
+while line:
+    print line,      #不输出空行
+    line = f.readline()
+f.close()
+
+[tht@d03 screpts]$ cat foo.txt 
+1 test line1
+testline2
+testline3
+[tht@d03 screpts]$ python p6.py 
+1 test line1
+testline2
+testline3
+	
+
+#!/usr/bin/env python
+f = open("foo.txt")
+for line in f:
+    print line,
+
+写入文件
+[tht@d03 screpts]$ cat p1.py 
+#!/usr/bin/env python
+principl = 100
+rate = 0.05
+numyears = 5
+year = 1
+f = open("too.txt","w")       #将文件以写的方式打开
+while year <= numyears:
+    principl = principl * (1 + rate)
+    print >>f, "%3d,%0.2f" % (year, principl)     #将输出的内容写入到文件中
+	f.write("%3d,%0.2f\n" % (year, principl))
+    year += 1
+f.close()
+
+
+##############################################
+字符串	
+可使用'test'或 "test"或 '''test '''
+单引号和双引号只能是在一行中的内容
+三引号可以是多行
+
+字符串存储在一个字符序列中，以整数作为索引，从0开始。
+a = "hello work"
+b = a[4]
+print b
+
+可以切片
+>>> b = a[2:5]
+>>> print b
+llo
+>>> b = a[:5]  
+>>> print b
+hello
+>>> b = a[1:] 
+>>> print b
+ello work
+
+
+可以使用+
+>>> aa = "tang "
+>>> bb = "hong "
+>>> cc = aa+bb+ "tao"
+>>> print cc
+tang hong tao
+
+
+>>> aa = "37"
+>>> bb = "11"
+>>> cc = aa + bb
+>>> print cc
+3711
+>>> cc = int(aa) + int(bb)    #需要转换
+>>> print cc
+48
+
+将非字符串转换成字符串
+str()  repr()  format()
+
+>>> s = "tanghongtao" + cc
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+TypeError: cannot concatenate 'str' and 'int' objects
+>>> s = "tanghongtao" + str(cc)
+>>> print s
+tanghongtao48
+>>> s = "tanghongtao" + repr(cc)  输入精确值
+>>> print s
+tanghongtao48
+>>> s = "tanghongtao" + format(cc,"4d")
+>>> print s
+tanghongtao  48
+
+
+############################
+列表
+列表是任意对象组成的序列
+>>> names = ["tang","hong","tao","chan"]
+>>> print names[0]
+tang
+>>> print names[2]
+tao
+>>> names[2] = "sex"
+>>> print names
+['tang', 'hong', 'sex', 'chan']
+>>> 
+>>> names.append("yang")
+>>> print names
+['tang', 'hong', 'sex', 'chan', 'yang']
+>>>
+>>> names.insert(2,"tomas")
+>>> print names
+['tang', 'hong', 'tomas', 'sex', 'chan', 'yang']
+
+>>> print names[0:2]
+['tang', 'hong']
+>>> print names[3:]
+['sex', 'chan', 'yang']
+
+>>> a = [1,2,3,4] + [4,5,6,7]
+>>> print a
+[1, 2, 3, 4, 4, 5, 6, 7]
+
+>>> b = [1,"name",3.22,["tang",["hong","tao"],"bb"],"sex"]
+>>> print b[3][1][1]
+tao
+
+
+列表高级用法
+[tht@d03 screpts]$ cat p7.py 
+#!/usr/bin/env python
+import sys
+if len(sys.argv) != 2:
+    print "please supply a filename"
+    raise SystemExit(1)
+f = open(sys.argv[1])
+lines = f.readlines()
+f.close()
+print lines
+fvalues = [float(line) for line in lines]
+print "the miniume value is ",min(fvalues)
+print "the maxmum value is ",max(fvalues)
+
+
+############################################################
+元组
+与列表一样，可以索引/切片，连接。但是不能修改它的内容，因此也比较节省空间
+
+>>> a = ("tang","hong","tao")
+>>> print a
+('tang', 'hong', 'tao')
+>>> 
+
+元组与列表结合使用
+[tht@d03 screpts]$ cat p8.py 
+#!/usr/bin/env python
+filename = "too.txt"
+portfolio = []
+for line in open(filename):
+    fields = line.split(",")
+    name = fields[0]
+    shares = int(fields[1])
+    price = float(fields[2])
+    stock = (name,shares,price)
+    portfolio.append(stock)
+print portfolio
+total = 0.0
+for name1,share1,price1 in portfolio:       #循环访问元组中的每个列表的所有变量
+    total += share1 * price1
+print total
+
+#######################################################33
+集合
+是一组无序的对象，创建集合使用set函数
+>>> s = set([1,2,3,4,5,6])
+>>> print s
+set([1, 2, 3, 4, 5, 6])
+>>> t = set([5,6,7,8,9,0])
+>>> a = s | t      ###s和t的并集
+>>> a
+set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+>>> 
+>>> b = t & s     ##t和s的交集
+>>> b
+set([5, 6])
+>>> c = s - t      ##差集项在s中并不在t中
+>>> c
+set([1, 2, 3, 4])
+>>> d = s ^ t       ##差集不会在两个中都出现
+>>> d
+set([0, 1, 2, 3, 4, 7, 8, 9])
+>>> 
+>>> a.add("tang")    ##添加一项
+>>> a
+set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 'tang'])
+>>> 
+>>> a.update([30,20,40])   ##添加多项
+>>> a
+set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 'tang', 20, 40, 30])
+>>>
+>>> a.remove("tang")     ##删除项
+>>> a
+set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 20, 40, 30])
+>>> 
+
+
+
+#################################################3
+字典
+是一个关联数组或散列表，其中包含通过键（key）索引的对象，在大括号{}中
+>>> stock = {"name":"tang","shares":20,"price":34.1}
+>>> print stock
+{'price': 34.100000000000001, 'name': 'tang', 'shares': 20}
+
+>>> name = stock["name"]
+>>> print name
+tang
+>>> vale = stock["shares"]*stock["price"]
+>>> print vale
+682.0
+>>> 
+
+
+>>> print stock
+{'price': 34.100000000000001, 'name': 'tang', 'shares': 20}
+>>> stock["shares"] = 70
+>>> print stock
+{'price': 34.100000000000001, 'name': 'tang', 'shares': 70}
+>>> 
+
+>>> stock["date"] = "june 7,2007"
+>>> print stock
+{'date': 'june 7,2007', 'price': 34.100000000000001, 'name': 'tang', 'shares': 70}
+>>> 
+
+创建一个空字典
+prices = {}
+or
+prices = dict()
+
+>>> prices = {"goog":34,"appl":89,"IBM":49,"msft":345,"tang":95}
+>>> if "goog" in prices:
+...     print prices["goog"]
+    else:
+	    print 0.0
+... 
+34
+>>> 
+
+可简写成
+>>> prices.get("goog",0.0)
+34
+>>> prices.get("good",0.0)
+0.0
+
+获取键值列表
+>>> syms = list(prices)
+>>> print syms
+['goog', 'tang', 'appl', 'IBM', 'msft']
+>>> 
+
+删除字典元素
+del prices["goog"]
+
+
+#########################################################
+迭代与循环
+
+range（i,j,k）
+>>> 
+>>> for a in range(1,9,2):
+...    print a
+... 
+1
+3
+5
+7
+
+字符串的迭代
+>>> a = "hello word"
+>>> for c in a:
+...     print c
+... 
+h
+e
+l
+l
+o
+ 
+w
+o
+r
+d
+
+列表的迭代
+>>> b = ["tang","hong","tao","zishan"]
+>>> for name in b:
+...     print name
+... 
+tang
+hong
+tao
+zishan
+
+字典的迭代
+>>> c = {"name":"tanghongtao","age":32,"sex":"boy"}
+>>> for key in c:
+...     print key ,c[key]
+... 
+age 32
+name tanghongtao
+sex boy
+
+文件的迭代
+>>> f = open("too.txt")
+>>> for line in f:
+...     print line,
+... 
+tang,12,2323.12
+hong,43,32.121
+tao,54,89.12
+>>>
+ 
+##############################
+函数
+
+定义
+>>> def remainder(a,b):
+...     q = a // b
+...     r = a - q*b
+...     return r
+... 
+
+使用
+>>> t = remainder(100,200)
+>>> print t
+100
+
+为参数设置默认值
+def connect(hostname,port,timeout=300):
+    #函数体
+	
+在函数体内部修改全局变量可使用global
+cont=0
+def foo():
+    global cont
+	cont += 1
+
+生成器yield	
+>>> def countdown(n):
+...     print "counting down!"
+...     while n > 0:
+...         yield n
+...         n -= 1
+... 
+>>> c = countdown(9)
+>>> c.next()
+counting down!
+9
+>>> c.next()
+8
+>>> c.next()
+7
+
+生成器般与for一起使用
+for i in countdown(5):
+    print i,
+
+例如:tail -f和grep命令	
+
+#!/usr/bin/env python
+import time
+def tail(f):
+    f.seek(0,1)
+    while True:
+        line =  f.readline()
+        if not line:
+            time.sleep(0.1)
+            continue
+        yield line
+
+def grep(lines,searchtext):
+    for line in lines:
+        if searchtext in line:yield line
+
+wwwlog = tail(open("too.txt"))
+pylines = grep(wwwlog,"python")
+for line in pylines:
+    print line,
+	
+###################################	
+协程
+
+def print_matches(matchtext):
+    print "looking for",matchtext
+	while True:
+        line = (yield)
+        if matchtext in line:
+            print line
+matcher = print_matches("python")
+matcher.next()
+matcher.send("hello World")
+matcher.send("python is cool")
+matcher.send("yow!")
+matcher.close()
+	
+生成器与协程结合使用
+#!/usr/bin/env python
+import time
+def tail(f):
+    f.seek(0,1)
+    while True:
+        line =  f.readline()
+        if not line:
+            time.sleep(0.1)
+            continue
+        yield line
+
+def print_matches(matchtext):
+    print "looking for",matchtext
+    while True:
+        line = (yield)
+        if matchtext in line:
+            print line
+
+matchers = [
+    print_matches("python"),
+    print_matches("guido"),
+    print_matches("jyphon")
+]
+for m in matchers: m.next()
+
+wwwlog = tail(open("too.txt"))
+for line in wwwlog:
+    for m in matchers:
+        m.send(line)
+
+
+
+########################################
+对象与类
+
+
+
+	
+	

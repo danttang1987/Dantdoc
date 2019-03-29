@@ -1,0 +1,17 @@
+mysql数据库监控
+方法一：
+netstat -lntup | grep 3307 | awk -F "[ :]+" '{print $4}'
+
+netstat -lntup | grep mysql | wc -l
+
+ss -lntup | grep mysql | wc -l
+
+lsof -i :3307 | wc -l
+
+nmap 127.0.0.1 -p 3307 | grep open |wc -l
+
+nc -w 2 127.0.0.1 3306 &>/dev/null
+echo $?
+
+也可通过mysql客户端
+mysql -uroot -p123.com -P 3307 -e "select version();" &>/dev/null;echo $?

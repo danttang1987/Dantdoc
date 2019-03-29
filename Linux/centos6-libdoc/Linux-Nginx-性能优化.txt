@@ -1,0 +1,316 @@
+﻿#使用参数优化nginx服务性能
+
+#优化worker_processes参数大小，建议根据CPU的核心数量配置，对于高并发可设置核心数*2；
+#查看CPU核心数
+grep processor /proc/cpuinfo | wc -l
+grep -c processor /proc/cpuinfo
+#查看物理CPU颗数
+grep 'physical id' /proc/cpuinfo | sort | uniq | wc -l
+sed -i 's/worker_processes	1/worker_processes	4/g' /application/nginx/conf/nginx.conf
+
+
+#绑定CPU到worker进行,在nginx.conf下的man上配置
+#四核配置如下
+worker_cpu_affinity 0001 0010 0100 1000;
+#八核配置如下
+worker_cpu_affinity 00000001 00000010 00000100 00001000 00010000 00100000 01000000 10000000;
+worker_cpu_affinity 0001 0010 0100 1000 0001 0010 0100 1000;
+
+
+
+#nginx事件处理模型优化
+#配置方法，在events模块下配置
+events
+{
+  use epoll;
+}
+#可选模型有：kqueue/rtsig/epoll/dev/poll/select
+#epoll:I/O多路复用模型
+
+
+#调整单个进程允许的客户端最大的连接数
+#在events下配置,默认配置512，在生产环境中需要加大这个值
+worker_connections 20480;
+
+#Nginx Worker进程最大打开文件数,配置在主标签上；
+#此参数与系统ulimit -HSn有关系
+worker_rlimit_nofile 65535;
+
+#优化服务器域名散列表
+#建议在配置server_name时以确定名字开始，在以通配符开始，最后在以通配符结束。
+#配置在http模块中
+http {
+server_names_hash_size 64;
+server_names_hash_bucket_size 64;
+}
+server_names_hash_max_size 512;
+
+
+#开启高效文件传输模式
+sendfile on;
+#需要同时将tcp_nopush和tcp_nodelay设置为on,可防止网络及磁盘I/O阻塞
+#配置块：http,server,location,if in location
+
+
+#优化Nginx连接参数，调整连接超时时间
+keepalive_timeout 60;
+#配置块：http,server,location
+
+client_header_timeout 15;
+#配置块：http,server此值为经验参考值
+
+client_body_timeout 15;
+#配置块：http,server,location
+
+send_timeout 25;
+#配置块：http,server,location,该值用于两个活动连接之间；
+
+#文件上传大小限制
+client_max_body_size 8m;
+#配置块：http,server,location
+
+
+#fastCGI相关调优
+http{
+fastcgi_connect_timeout 240;
+fastcgi_send_timeout 240;
+fastcgi_read_timeout 240;
+fastcgi_buffer_size 64k;
+fastcgi_buffers 4 64k;
+fastcgi_busy_buffers_size 128k;
+fastcgi_temp_file_write_size 128k;
+fastcgi_cache_path /data/ngx_fcgi_cache levels=2:2 keys_zone=ngx_fcgi_cache:512m inactive=1d max_size=40g;
+ server {
+ 	location ~ .*\.(php|php5)${
+ 	fastcgi_pass 127.0.0.1:9000;
+ 	fastcgi_index index.php;
+ 	include fastcgi.conf;
+ 	fastcgi_cache ngx_fcgi_cache;
+ 	fastcgi_cache_valid 200 302 1h;
+ 	fastcgi_cache_valid 301 1d;
+ 	fastcgi_cache_valid any 1m;
+ 	fastcgi_cache_min_uses 1;
+ 	fastcgi_cache_use_stale error timeout invalid_header http_500;
+ 	fastcgi_cache_key http://$host$request_uri
+ 	}
+ }
+}
+
+
+#配置nginxgzip
+gzip on;
+gzip_min_length 1k;
+gzip_buffers 4 16k;
+gzip_http_version 1.1;
+gzip_comp_level 2;
+gzip_types text/plain application/x-javascript text/css application/xml;
+gzip_vary on;
+
+
+#配置nginx expires缓存，使用范例:
+location ~ .*\.(gif|jpg|jpeg|png|bmp|swf)$ {
+	expires	3650d;
+}
+location ~ .*\.(css|js)$ {
+	expires 30d;
+}
+location ~ ^/(images|css|flush|media|static|javascript)/ {
+	expires 3650d;
+}
+
+
+
+#日志优化
+#切割日志使用如下脚本
+mkdir /server/scripts/ -p
+cat >/server/scripts/ngx_cut_log.sh <<EOF
+#! /bin/sh
+Deteformat=`date +%Y%m%d`
+Basedir="/application/nginx"
+Nginxlogdir="$Basedir/logs"
+Logname="www_access"
+[ -d $Nginxlogdir ] && cd $Nginxlogdir || exit 1
+[ -f ${Logname}.log ] || exit 1
+/bin/mv ${Logname}.log ${Deteformat}_${Logname}.log
+${Basedir}/sbin/nginx -s reload
+EOF
+
+
+#记录不需要的访问日志：
+location ~ .*\.(js|jpg|JPG|jpeg|JPEG|css|bmp|gif|GIF)$ {
+	access_log off;
+}
+
+#设置日志目录权限
+chmod -R root.root /app/logs
+chmod -R 700 /app/logs/
+
+
+#禁止解析以下目录中的程序
+location ~ ^/images/.*\.(php|php5|sh|pl|py)${
+deny all;
+}
+location ~ ^/static/.*\.(php|php5|sh|pl|py)${
+deny all;
+}
+
+#限制IP
+location ~ ^/admin/ {
+allow 192.168.0.12;
+deny all;
+}
+
+#Nginx禁止非法域名解析访问
+server {
+listen 80 default_server;
+server_name _;
+return 501;
+}
+
+
+#或
+server {
+listen 80 default_server;
+server_name _;
+rewrite ^(.*) http://www.tang.com/$1 permanent;
+}
+
+
+
+#防止盗链接
+#有如下几种方式1、根据http referer实现；2、根据cookie防止盗链；3、通过加密变换访问路径实现
+location ~* ^.+\.(jpg|gif|png|swf|flv|wma|wmv|asf|mp3|mmf|zip|rar)$ {
+	valid_referers none blocked server_name *.tang.com tang.com
+if ($invalid_referer) {
+	rewrite ^/ http://www.tang.com/img/nolink.jpg;
+	}
+	access_log off;
+	expires 1d;
+	break;
+}
+
+#也可以使用nginxHttpAccessKeyModule
+
+
+#nginx错误页面优雅显示,在server或location下配置
+error_page 403 /403.html;
+
+#可对错误页面指定单独的路径
+error_page 501 502 503 500 504 /50x.html;
+location =/50x.html {
+root /data0/www/html;
+}
+
+
+
+#可改变状态码
+error_page 404 = 200 /200.html;
+
+#
+
+
+
+#nginx目录和文件的权限
+#所有站点的目录都应该为root所有，所有目录权限为755，所有文件权限为644
+#上传服务器独立，上传目录所有者为www或nginx,启动Nginxe服务用户；
+
+
+
+#防爬虫优化
+if ($http_user_agent ~* "qihoobot|Baiduspider|googlebot|googlebot-mobile|googlebot-image|mediapartners-google|Adsbot-google|yahoo! Slurp china|Youdaobot|sosospider|sogou spider|sogou web spider|msnbot") {
+return 403;
+}
+
+
+#利用Nginx限制请求方法
+if ($request_method !~* ^(get|head|post)$) {
+return 403;
+}
+
+#可以对上传服务器禁用Get方法，保证用户上传可执行文件，并运行。
+
+#CDN(Content delivey network)
+#核心技术是智能DNS群集和Cache群集
+#作用：节省成本（带宽），提升用户体验，降低DDOS攻击，
+
+
+#使用普通用户启动Nginx
+#在默认情况下启动Nginx的Master进程是使用root用户
+useradd inca
+echo "1234.com" | passwd --stdin inca
+su - inca
+mkdir conf logs www
+cp /appliction/nginx/conf/mime.types ~/conf/
+cp /appliction/nginx/conf/nginx.conf ~/conf/
+#并修改nginx.conf:主要修改log、pid、server标签中的路径，在main中添加user如：
+error_log   /home/inca/logs/error.log;
+user inca inca;
+pid /home/inca/logs/nginx.pid;
+server {
+    listen 8080;
+    server_name www1.tang.com;
+    root /home/inca/www;
+    location / {
+        index index.html;
+        }
+    }
+    access_log /home/inca/logs/web_log.access.log main;
+
+echo inca >~/www/index.html
+#启动Nginx
+/appliction/nginx/sbin/nginx -c /home/inca/conf/nginx.conf
+
+
+
+#控制并发连接数，使用ngx_http_limit_conn_module
+#参数1：limit_conn_zone  key zone=name: size;    在http中配置
+#参数2：limit_conn zone number;  在http、server、location中配置
+
+#例1：限制单IP连接数
+#在http中配置
+limit_conn_zone $binary_remote_addr zone=addr:10m;
+#在server中配置
+limit_conn addr 1;
+
+
+limit_conn_zone $binary_remote_addr zone=perip:10m;
+#例2：限制服务器连接数
+limit_conn_zone $server_name zone=perserver:10m;
+
+server {
+    ...
+    limit_conn perserver 100;
+}
+
+
+
+
+
+
+#控制客户端的请求速率，使用ngx_http_limit_req_module
+#配置参数：limit_req_zone key zone=name:size rate=rate;   在http中配置 rate为每少多个请求r/s
+#配置参数：limit_req zone=name[burst=number][nodelay];     在http、server、location中配置
+http {
+    limit_req_zone $binary_remote_addr zone=one:10m rate=1r/s;
+
+    ...
+
+    server {
+
+        ...
+
+        location /search/ {
+            limit_req zone=one burst=5;
+        }
+
+
+
+
+limit_req_zone $binary_remote_addr zone=perip:10m rate=1r/s;
+limit_req_zone $server_name zone=perserver:10m rate=10r/s;
+
+server {
+    ...
+    limit_req zone=perip burst=5 nodelay;
+    limit_req zone=perserver burst=10;
+}

@@ -1,0 +1,95 @@
+shell-check-Mysql复制
+#!/bin/bash
+#######################################
+#this script function is check mysql slave replication status
+#Data:2019-03-16  Created
+#User:zishan
+#v1
+#######################################
+path=/server/script
+MAIL_GROUP="123@qq.com 222@qq.com"
+PAGER_GROUP="18232899098 13890219832"
+LOG_FILE=/tmp/mysqlrep_check.log
+USER=root
+PASSWORD=123.com
+PORT=3307
+MYSQLCMD="mysql -u$USER -p$PASSWORD -S /data/$PORT/mysql.sock"
+error=(1008 1007 1062)
+RETVAL=0
+[ ! -d $path ] && mkdir -p $path
+function judgeError(){
+	for((i=0;i<${#error[*]};i++))
+	do
+		if [ "$1" == "${error[$i]}" ]
+		then
+			echo "Mysql slave errorno is $1,auto repairing it."
+			$MYSQLCMD -e "stop slave;set global sql_slave_skip_counter=1;start slave;"
+		fi
+	done
+	return $1
+}
+
+function CheckDB(){
+	status=($(awk -F ":" '/_Running|Last_Errno|_Behind/{print $NF}' slave.log))
+	expr ${status[3]} + 1 &> /dev/null
+	if [ $? -ne 0 ]
+	then
+		${status[3]}=300
+	fi
+	if [ "${status[0]}" == "Yes" -a "${status[1]}" == "Yes" -a ${status[3]} -lt 120 ]
+	then
+		echo "mysql replication is OK"
+		return 0
+	else
+		echo "mysql replication is failed"
+		judgeError ${status[2]}
+		
+	fi
+}
+
+function sedmail(){
+	local SUBJECT_CONTENT=$1
+	for MAIL_USER in `echo $MAIL_GROUP`
+	do
+		mail -s $SUBJECT_CONTENT $MAIL_USER <$LOG_FILE
+	done
+}
+
+function PAGER(){
+	for PAGER_USER in `echo "$PAGER_GROUP"`
+	do
+		TITLE=$1
+		CONTACT=$PAGER_USER
+		HTTPGW="http://oldboy.sms.com/smsproxy/sendsms.action"
+		crul -d cdkey=5ADF-EFA -d password=oldboy -d phone=$CONTACT -d message="$TITLE[$2]" $HTTPGW
+		
+	done
+}
+
+function SendMsg(){
+	if [ $1 -ne 0 ]
+	then
+		RETVAL=1
+		NOW_TIME=`date +%F %H:%M:%S`
+		SUBJECT_CONTENT="Mysql slave is error,errorno is $2,${NOW_TIME}"
+		echo -e "$SUBJECT_CONTENT"|tee $LOG_FILE
+		sedmail $SUBJECT_CONTENT
+		PAGER $$SUBJECT_CONTENT $NOW_TIME
+	else
+		echo "Mysql slave status is OK"
+		RETVAL 0
+	fi
+	return $RETVAL
+}
+
+function main(){
+	while true
+	do
+		CheckDB
+		SendMsg $?
+		sleep 30	
+	done
+}
+
+main
+

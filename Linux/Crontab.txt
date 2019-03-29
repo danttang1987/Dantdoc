@@ -1,0 +1,9 @@
+1、检查Crontab服务是否开
+chkconfig crond on
+service crond states
+
+2、编辑Crondtab
+vi /etc/crontab
+
+50 8 * * * /root/ab.sh
+

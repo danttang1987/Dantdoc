@@ -1,0 +1,100 @@
+shell 虚拟IP配置
+
+ifconfig eht0:0 192.168.237.133/24 up
+ifconfig eth0:0 192.168.237.133/24 down
+
+ip addr add 192.168.237.133/24 dev eth0 label eth0:0
+ip addr del 192.168.237.133/24 dev eth0 label eth0:0
+
+
+案例一：批量添加IP地址150-160，但不添加155
+#!/bin/bash
+[ -f /etc/init.d/functions ] && . /etc/init.d/functions
+op(){
+        if [ "$1" = "add" ]
+        then
+                list=`echo {150..160}`
+        else
+                list=`echo {160..150}`
+        fi
+        for i in $list
+        do
+                if [ $i -eq 155 ]
+                then
+                        continue
+                fi
+                ip addr $1 192.168.237.${i}/24 dev eth0 label eth0:$i &>/dev/null
+                RETVAL=$?
+                if [ $RETVAL -eq 0 ]
+                then
+                        action "192.168.237.${i}/24 $1 secu." /bin/true
+                else
+                        action "192.168.237.${i}/24 $1 secu." /bin/false
+                        break
+                fi
+        done
+        return $RETVAL
+}
+
+case "$1" in
+        start)
+                op add
+                RETVAL=$?
+                ;;
+        stop)
+                op del
+                RETVAL=$?
+                ;;
+        restart)
+                op del
+                sleep 2
+                op add
+                RETVAL=$?
+                ;;
+        *)
+                printf "Usage：$0 {start|stop|restart}"
+esac
+exit $RETVAL	
+
+
+案例二：统计日志中的访问字节数的总和
+方法一：
+#!/bin/bash
+sum=0
+exec <$1
+while read line
+do
+	size=`echo $line|awk 'print $NF'`
+	expr $size + 1 &>/dev/null
+	if [ $? -ne 0 ];then
+		continue
+	fi
+	((sum=sum+size))
+done
+echo "$1 :total:$sum Bytes=`echo $((sum/1024))`KB"
+
+
+方法二：
+#!/bin/bash
+sum=0
+exec <$1
+while read line
+do
+	size=`echo $line|awk 'print $NF'`
+	[ -n $size -a "$size"="${size//[^0-9]/}" ] || continue
+	((sum=sum+size))
+done
+echo "$1 :total:$sum Bytes=`echo $((sum/1024))`KB"
+
+方法三：
+#!/bin/bash
+sum=0
+exec <$1
+while read line
+do
+	size=`echo $line|awk 'print $NF'`
+	[ -z "`echo $size|sed 's/[0-9]//g'`" ] || continue
+	((sum=sum+size))
+done
+echo "$1 :total:$sum Bytes=`echo $((sum/1024))`KB"
+

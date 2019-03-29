@@ -1,0 +1,52 @@
+shell-批量创建用户
+
+seq -w 10
+echo {01..10}
+
+生成随机密码：
+方法一：
+echo zishan$RANDOM | md5sum |cut -c 5-12
+
+方法二：
+openssl rand -base64 8
+
+方法三：
+date +%s%N | md5sum |cut -c 5-12
+
+方法四：
+head /dev/urandom | cksum | md5sum |cut -c 5-12
+
+方法五：
+cat /proc/sys/kernel/random/uuid | md5sum |cut -c 5-12
+
+方法六：需要安装expect
+mkpasswd -l 9 -d 2 -c 3 -C 3 -s 1
+-l 指定密码长度
+-d 指定密码中数据数量
+-c 指定密码中小写数量
+-C 指定密码大写数量
+-s 指定密码中特殊字符数量
+
+
+
+
+
+
+
+#!/bin/bash
+. /etc/init.d/functions
+User=zishan
+Userlog=/tmp/userp.log
+for id in `seq -w 10`
+do
+        pass=`echo $RANDOM | md5sum |cut -c 3-13`
+        useradd $User$id && \
+        echo $pass | passwd --stdin $User$id &> /dev/null
+        if [ $? -eq 0 ]
+        then
+                action "$User$id create secu"   /bin/true
+                echo "$User$id : $pass" >>$Userlog
+        else
+                action "$User$id create fail"   /bin/false
+        fi
+done

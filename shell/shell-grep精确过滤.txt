@@ -1,0 +1,5 @@
+shell-grep精确过滤
+
+grep -w "zishan"  file   过滤完整单词
+grep "\bzishan\b" file   过滤完整单词
+grep "^zishan$" file     过滤整行

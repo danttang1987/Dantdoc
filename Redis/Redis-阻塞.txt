@@ -1,0 +1,88 @@
+Redis-阻塞
+Redis是单线程架构，读写都是由一个线程完成，如出现问题
+内在原因：不合理使用API和数据结构、CPU饱和、持久性阻塞
+外在原因：CPU竞争、内存交换、网络问题
+
+一、内在原因
+	1、不合理使用API和数据结构
+		1）如何发现慢查询
+			slowlog get {n}
+			如发现慢查询需要及时调整，建议如下：
+			1、修改为低算法的度的命令，如：hgetall改为hmget等，禁用keys、sort; 
+			2、调整大对象，缩减大对象数据，或把大对象数据拆分为多个小对象，
+		2）如果发现大对象
+			可以通过bigkeys命令，
+			redis-cli -p 6380 -a 123.comm --bigkeys
+	2、CPU饱和
+		redis -h {host} -p{port} --stat
+		[root@redis01 6380]# redis-cli -p 6380 -a 123.comm --stat
+		------- data ------ --------------------- load -------------------- - child -
+		keys       mem      clients blocked requests            connections          
+		1          1.80M    1       0       9377 (+0)           17          
+		1          1.80M    1       0       9379 (+2)           17          
+		1          1.84M    1       0       9381 (+2)           17    
+		此命令每秒输出一行，如每秒请求(+2)上万，可能需要进行水平扩展，如果只有几千，而CPU已经饱和，可能是有高算法复杂度的命令或过度的内存优化；
+		这些情况可以通过info commandstats统计信息分析出命令不合理开销时间；
+		[root@redis01 6380]# redis-cli -p 6380 -a 123.comm info commandstats
+		# Commandstats
+		cmdstat_strlen:calls=1,usec=3,usec_per_call=3.00
+		cmdstat_scan:calls=1,usec=34,usec_per_call=34.00
+		cmdstat_dbsize:calls=1,usec=1,usec_per_call=1.00
+		cmdstat_auth:calls=13,usec=51,usec_per_call=3.92
+		cmdstat_type:calls=1,usec=3,usec_per_call=3.00
+		cmdstat_psync:calls=3,usec=66725,usec_per_call=22241.67
+		cmdstat_replconf:calls=9494,usec=24654,usec_per_call=2.60
+		注释：
+		cmdstat_replconf   ##命令
+		calls=3            ##执行次数
+		usec=66725         ##共使用时间微秒
+		usec_per_call=2.60 ##每次使用时间微秒
+	3、持久化阻塞
+		1、fork阻塞
+			如使用info stats获取latest_fork_usec,表示redis最近一次fork操作的耗时，如果大于1秒，需要做优化
+		
+		2、AOF刷盘阻塞
+			AOF后台做fsync操作时是每秒一次，当数据量大不，距上次完成超2秒，就会出现阻塞，这种阻塞是硬盘压力引起，会出现日志“AOF fsync is taking too long (disk is busy).writing the AOF”
+			也可以查看info persistence统计中的aof_delayde_fsync指标，每次发生fdatasync阻塞主线程时会累加，
+		3、HugePage写操作阻塞
+			对于开启TransparentHugePages的操作系统，每次复制内存页单位由4K变为2MB，放大了512倍，导致大量写操作慢查询，如简单的incr也会成为慢查询。
+			
+			
+二、外在原因
+	1、CPU竞争
+		1）进程竞争：Redis是典型的CPU密集型应用，不建议与其他多核密集型服务部署在一起，
+		2）绑定CPU:通常情况下可以将Redis进程绑定到CPU上，降低CPU上下切换的开销，但是也存在例外（开启持久化不建议绑定）：
+		
+	2、内存交换
+		查看是否有Redis进程使用交换分区
+		redis-cli -p {port}-h {host} -a {password} info server | grep process_id
+		redis-cli -p 6380 -a 123.comm info server| grep process_id|awk -F":" '{print $2}'
+		cat /proc/1234/smaps | grep -i swap
+		
+	3、网络问题
+		1）连接拒绝，有三种情况
+			1-网络闪断 通过sar -n
+			2-Redi连接拒绝：通过maxclients参数控制客户端的最大连接数，可统计info stats的rejected_connections统计指示
+			3-连接溢出：可能是由于进程限制或backlog队列溢出
+				进程限制：操作系统会对进程的资源进行限制，可通过ulimit -n查看，通常是1024，可修改为ulimit -n 65535
+				backlog溢出：系统对特定的端口的TCP连接使用backlog队列保存，Redis默认为511，通过修改tcp-backlog参数设置，高并发场景可以适当增加这个参数。
+							还需要修改系统内核，echo 511 >/proc/sys/net/core/somaxconn修改。
+							可通过netstat -s | grep overflowed查看
+		2）网络延迟
+			可以通过Redis-cli 命令进行测试
+			[root@redis01 6380]# redis-cli -p 6380 -a 123.comm --latency
+			[root@redis01 6380]# redis-cli -p 6380 -a 123.comm --latency-dist
+			[root@redis01 6380]# redis-cli -p 6380 -a 123.comm --latency-history
+			min: 0, max: 2, avg: 0.09 (1347 samples) -- 15.01 seconds range
+		3）网卡软中断
+			由于单个网卡只能使用一个CPU
+			top +1
+			[root@redis01 6380]# top
+
+			top - 18:22:53 up  3:55,  2 users,  load average: 0.00, 0.00, 0.00
+			Tasks:  83 total,   1 running,  82 sleeping,   0 stopped,   0 zombie
+			Cpu0  :  0.0%us,  0.3%sy,  0.0%ni, 99.3%id,  0.0%wa,  0.0%hi,  0.3%si,  0.0%st
+			
+			如:si过高表示存在软中断
+			
+		

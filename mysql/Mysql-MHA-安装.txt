@@ -1,0 +1,113 @@
+MHA安装
+
+安装node节点：
+1、环境准备（所有节点）
+yum install perl-DBD-MySQL -y
+
+rpm -ivh mha4mysql-node-0.56-0.el6.noarch.rpm
+
+
+mysql -uroot -p123.com -e "grant all privileges on *.* to mha@'192.168.237.3%' identified by '123.com';"
+
+
+ln -s /application/mysql/bin/mysqlbinlog /usr/bin/mysqlbinlog
+ln -s /application/mysql/bin/mysql /usr/bin/mysql
+
+
+部署管理节点：
+建议安装在一台单独的服务器上或在从库上
+yum install perl-Config-Tiny epel-release perl-Log-Dispatch perl-Parallel-ForkManager perl-Time-HiRes -y
+
+rpm -ivh mha4mysql-manager-0.56-0.el6.noarch.rpm
+
+mkdir /etc/mha
+mkdir -p /var/log/mha/app1
+
+vim /etc/mha/app1.cnf
+
+
+[server default]
+user=mha
+password=123.com
+manager_workdir=/var/log/mha/app1
+manager_log=/var/log/mha/app1/app1.log
+ssh_user=root
+master_binlog_dir=/application/mysql/data    #如每Mysql的Binlog文件的路径不一样，可以将这个配置放到每个Server下。
+repl_user=rep
+repl_password=123.comm
+ping_interval=2
+
+[server1]
+hostname=192.168.237.31
+port=3306
+
+[server2]
+
+hostname=192.168.237.32
+port=3306
+
+[server3]
+hostname=192.168.237.33
+port=3306
+
+
+
+
+candidate_master=1     #优先提升为主
+check_repl_delay=0     #忽略延迟
+
+
+
+注，解决MHA需要使用root进行SSH登录，可以修改sshd_config配置文件，并开启root用户登录。
+AllowUsers root@192.168.237.32
+AllowUsers root@192.168.237.33
+AllowUsers root@192.168.237.31
+AllowUsers tht@*
+
+创建Root 的SSH key，需要在每台上配置
+ssh-keygen -t dsa -P '' -f ~/.ssh/id_dsa >/dev/nuss 2>&1
+ssh-copy-id -i ~/.ssh/id_dsa.pub "-p 52113 root@192.168.237.33"
+ssh-copy-id -i ~/.ssh/id_dsa.pub "-p 52113 root@192.168.237.32"
+ssh-copy-id -i ~/.ssh/id_dsa.pub "-p 52113 root@192.168.237.31"
+
+使用工具测试
+masterha_check_ssh --conf=/etc/mha/app1.cnf
+
+masterha_check_repl --conf=/etc/mha/app1.cnf
+
+启动服务
+nohup masterha_manager --conf=/etc/mha/app1.cnf --remove_dead_master_conf --ignore_last_failover < /dev/null >/var/log/mha/app1/manager.log 2>&1 &
+
+--remove_dead_master_conf      该参数代表当发生主从切换后，老的主库的ip将会从配置文件中移除。
+--manger_log                    日志存放位置
+--ignore_last_failover          在缺省情况下，如果MHA检测到连续发生宕机，且两次宕机间隔不足8小时的话，则不会进行Failover，
+之所以这样限制是为了避免ping-pong效应。该参数代表忽略上次MHA触发切换产生的文件，默认情况下，MHA发生切换后会在日志目录，
+也就是上面我设置的/data产生app1.failover.complete文件，下次再次切换的时候如果发现该目录下存在该文件将不允许触发切换，
+除非在第一次切换后收到删除该文件，为了方便，这里设置为--ignore_last_failover。
+
+
+故障转移后，如原Master恢复，需要将在原Master上执行mha log中的change master语句，在start slave; 
+如下：
+CHANGE MASTER TO MASTER_HOST='192.168.237.32', MASTER_PORT=3306, MASTER_AUTO_POSITION=1, MASTER_USER='rep', MASTER_PASSWORD='123.comm'
+
+#故障转移成功后，会把配置文件中的原master服务器的配置删除，恢复Master后需要手动添加。
+
+
+Binlog Server
+
+需要增加如下服务器标签：
+
+[binlog1]
+no_master=1                             #永远不为Master
+hostname=192.168.237.31                    
+master_binlog_dir=/data/mysql/data/binlog/   #Binlog的日志备份路径
+
+
+拉Binlog到此目录：
+mysqlbinlog -R --host=192.168.237.33 --user=mha --password=123.com --raw --stop-never d03-bin.000001 &
+
+拉完Binlog日志后在启动MHA
+nohup masterha_manager --conf=/etc/mha/app1.cnf --remove_dead_master_conf --ignore_last_failover < /dev/null >/var/log/mha/app1/manager.log 2>&1 &
+
+刷新Binlog验证：
+mysql -uroot -p123.com -e "flush logs;"

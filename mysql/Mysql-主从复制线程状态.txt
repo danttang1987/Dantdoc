@@ -1,0 +1,84 @@
+#主数据复制的I/O线程同步状态
+mysql -uroot -pasdf131 -e "show processlist\G;"
+##*************************** 1. row ***************************
+##     Id: 16
+##   User: rep
+##   Host: 192.168.237.13:10692
+##     db: NULL
+##Command: Binlog Dump
+##   Time: 7726
+##  State: Master has sent all binlog to slave; waiting for binlog to be updated   
+##   Info: NULL
+##*************************** 2. row ***************************
+##     Id: 27
+##   User: root
+##   Host: localhost
+##     db: NULL
+##Command: Query
+##   Time: 0
+##  State: NULL
+##   Info: show processlist
+#常见状态说明：
+#Master has sent all binlog to slave; waiting for binlog to be updated   线程目前为空闲状态，等待主服务器上的二进制日志更新；
+#Sending binlog event to slave          线程已经从Binlog中读取了一个日志，正在将它发送给从服务器；
+#Finished reading one binlog;swithing to next binlog    线程已经读完一个Binlog日志文件，并且正在打开下一个要发送的到从服务器的日志；
+#waiting fo finalize termination      线程停止时发生的一个很简单的状态；
+
+
+#从数据库的Mysql线程工作状态
+mysql -uroot -p123.com -S /data/3308/mysql.sock -e "show processlist\G;"
+
+##*************************** 1. row ***************************
+##     Id: 34
+##   User: system user
+##   Host: 
+##     db: NULL
+##Command: Connect
+##   Time: 8352
+##  State: Waiting for master to send event
+##   Info: NULL
+##*************************** 2. row ***************************
+##     Id: 35
+##   User: system user
+##   Host: 
+##     db: NULL
+##Command: Connect
+##   Time: 8045
+##  State: Slave has read all relay log; waiting for the slave I/O thread to update it
+##   Info: NULL
+
+
+
+#从库I/O线程工作状态
+The following list shows the most common states you may see in the State column for a slave server
+SQL thread:
+• Waiting for the next event in relay log
+The initial state before Reading event from the relay log.
+• Reading event from the relay log
+The thread has read an event from the relay log so that the event can be processed.
+• Making temp file
+The thread is executing a LOAD DATA INFILE statement and is creating a temporary file containing
+the data from which the slave will read rows.
+• Slave has read all relay log; waiting for the slave I/O thread to update
+it
+The thread has processed all events in the relay log files, and is now waiting for the I/O thread to
+write new events to the relay log.
+• Waiting for slave mutex on exit
+A very brief state that occurs as the thread is stopping.
+The State column for the I/O thread may also show the text of a statement. This indicates that the
+thread has read an event from the relay log, extracted the statement from it, and is executing it.
+
+
+Replication Slave Connection Thread States
+These thread states occur on a replication slave but are associated with connection threads, not with
+the I/O or SQL threads.
+• Changing master
+The thread is processing a CHANGE MASTER TO statement.
+• Killing slave
+The thread is processing a STOP SLAVE statement.
+• Opening master dump table
+This state occurs after Creating table from master dump.
+• Reading master dump table data
+This state occurs after Opening master dump table.
+• Rebuilding the index on master dump table
+This state occurs after Reading master dump table data.

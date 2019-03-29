@@ -1,0 +1,141 @@
+cobbler部署并自动化安装系统
+关闭防火墙和selinux
+
+iptables -F
+systemctl stop firewalld
+sed -i "s/SELINUX=enforcing/SELINUX=disabled/g" /etc/selinux/config
+
+
+安装elpel源
+for Centos7
+http://mirrors.aliyun.com/epel/7/x86_64/epel-release-7-5.noarch.rpm
+
+rpm -ivh http://mirrors.aliyun.com/epel/epel-release-latest-7.noarch.rpm
+
+
+#yum install -y httpd dhcp tftp bind bind-chroot caching-nameserver python-ctypes cobbler cobbler-web
+yum install -y httpd dhcp tftp cobbler cobbler-web pykickstart xinetd
+ 
+廖雪峰   Python 和Git教程
+
+在/etc/httpd/conf.d下有两个文件
+cobbler.conf
+cobbler-web.conf
+
+启动apache
+systemctl start httpd
+systemctl start cobblerd
+cobbler check
+
+
+
+vim  /etc/cobbler/settings
+修改：netxt-server
+	  server
+sed -i '/^next_server/s/127.0.0.1/192.168.237.200/' /etc/cobbler/settings
+sed -i '/^server/s/127.0.0.1/192.168.237.200/' /etc/cobbler/settings
+
+vim /etc/xinetd.d/tftp
+修改：disable 为no
+sed -i '/disable/s/yes/no/g' /etc/xinetd.d/tftp
+
+systemctl start rsyncd
+
+cobbler get-loaders
+
+Pd=`openssl passwd -1 -salt 'zishan' '123.commm'`
+sed -i '/^default_password_crypted:/d' /etc/cobbler/settings.bak
+echo "default_password_crypted:\"$Pd\"" >> /etc/cobbler/settings.bak
+###sed /^default_password_crypted:/s/\".*\"/\""$Pd"\"/ /etc/cobbler/settings
+vim /etc/cobbler/settings
+	修改default_password
+	将上面生成的密码放到这个配置文件中
+	
+在使用检查
+cobbler check	
+
+dhcp配置
+vim /etc/cobbler/settings
+修改dhcp 将0改为1
+
+sed -i '/^manage_dhcp/s/0/1/' /etc/cobbler/settings
+
+修改dhcp模板文件
+vim /etc/cobbler/dhcp.template
+
+
+重启cobbler
+systemctl restart cobblerd
+cobbler sync
+
+
+导入镜像
+挂载一个操作系统镜像
+cobbler import --path=/mnt --name=centos-7-x86_64 --arch=x86_64
+
+导入到
+/var/www/cobbler/ks_mirror
+
+
+
+
+
+
+Kickstart 文件：38：58
+Centos7-x86_64.cfg
+
+
+
+
+cobbler profile
+
+cobbler profile list
+
+cobbler profile report
+
+修改Kickstart
+cobbler profile edit --name=centos-7-x86_64 --kickstart=/var/lib/cobbler/kickstarts/CentOS-7-x86_64.cfg
+
+
+Centos7将网上变成etho
+
+cobbler profile edit --name=centos-7-x86_64 --kopts='net.ifnames=0 biosdevname=0'
+
+
+
+
+
+修改完成后需要执行cobbler sync
+
+yum install -y xinetd
+systemctl start xinetd
+
+
+
+
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

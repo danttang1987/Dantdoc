@@ -1,0 +1,55 @@
+[root@db01 ~]# cat /etc/sysctl.conf | grep -E "(range|syn_backlog|fin_t)"
+net.ipv4.tcp_fin_timeout = 2
+net.ipv4.ip_local_port_range = 4000    65000
+net.ipv4.tcp_max_syn_backlog = 16384
+
+
+文件系统
+挂载选项
+data=writeback   只会记录元数据 最快，可能不安全
+data=ordered     只会记录元数据 比上一个慢，但安全
+data=journal      
+
+如：
+/dev/sda2 /data/mysql noatime,nodiratime,data=writeback 0 1
+
+
+选择磁盘队列调度策略
+[root@db01 ~]# cat /sys/block/sda/queue/scheduler 
+noop anticipatory deadline [cfq] 
+MYsql不建议使用cfp,可选择noop或deadline
+echo deadline > /sys/block/sda/queue/scheduler
+
+内存交换空间优化
+1、设置OOM，防止在资源不足时杀掉一些进程（可设置OOM_adj或oom_score_adj）
+
+2、控制交换分区使用策略0-100（默认为60，一般不能满足使用需求）
+echo "vm.swappiness = 0" >> /etc/sysctl.conf
+sysctl -p
+[root@db01 ~]# cat /proc/sys/vm/swappiness 
+0
+
+
+[root@db01 ~]# vmstat 5
+procs -----------memory---------- ---swap-- -----io---- --system-- -----cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+ 1  0      0 815936  12844  52680    0    0    18     1   17   21  0  0 100  0  0
+ 0  1      0 815912  12844  52708    0    0     0     2   11   13  0  0 100  0  0
+ 
+ [root@db01 ~]# iostat -dx 5
+Linux 2.6.32-754.6.3.el6.x86_64 (db01)  11/28/2018      _x86_64_        (1 CPU)
+
+Device:         rrqm/s   wrqm/s     r/s     w/s   rsec/s   wsec/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
+sda               0.52     0.16    0.75    0.15    33.97     2.49    40.84     0.00    1.43    0.78    4.73   0.58   0.05
+scd0              0.00     0.00    0.01    0.00     0.07     0.00     8.00     0.00   11.27   11.27    0.00  11.27   0.01
+dm-0              0.00     0.00    1.00    0.31    31.80     2.48    26.26     0.00    2.16    1.17    5.33   0.36   0.05
+dm-1              0.00     0.00    0.08    0.00     0.63     0.00     8.00     0.00    0.38    0.38    0.00   0.28   0.00
+
+ rrqm/s和wrqm/s    每秒合并的读取和写入数量
+ r/s和w/s          每秒发送到设备的读取和写入数量
+ rsec/s和wsec/s    每秒读取和写入扇区数
+ avgrq-sz          请求的扇区数
+ avgqu-sz          在设备队列中等待的请求数
+ await             在磁盘队列上花费的毫秒数
+ svctm             服务请求花费的毫秒数，不包括排队
+ 

@@ -1,0 +1,352 @@
+1、数据库进程Kill -9关闭后导致数据库无法启动
+
+修改mysql提示符
+prompt \u@tang\r:\m:\s->
+
+也可以放在mysql的配置文件中
+[mysql]
+prompt \\u@tang\\r:\\m:\\s->
+
+linux 帮忙
+
+man和help
+help:内置命令的帮助
+man:进程、配置文件、函数
+
+mysql 帮忙
+help:查看命令使用方法（善于使用help）
+
+help show grants 
+
+show grants for 'root'@'localhost'
+
+
+###############################################
+
+
+安装完成后优化
+1、设置root密码
+  方法一
+  mysqladmin -u root password 'asdf131'
+  方法二
+  mysql>update mysql.user set password=PASSWORD("123Com") where user="root";
+  flush privileges;
+  方法三
+  mysql> set password for root@"localhost" = PASSWORD("1234COM");
+  方法四
+  mysql> grant usage on *.* to root@"%" identified by "tanghongtao";
+
+2、删除不需要的用户，或创建新名管理员
+  
+  
+  
+  
+  
+  
+  
+mysql密码找回
+1、停止数据库
+pkill id
+
+2、启动时加参数
+mysqld_safe --defaults-file=/data/3307/my.cnf --skip-grant-tables --user=mysql
+注：多实例要指定配置文件，并且还需要--skip-grant-tables放到后面
+
+3、修改密码
+update mysql.user set password=PASSWORD("123Com") where user="root";
+
+
+#####################################################
+SQL结构查询语言基础
+分类：
+1、DQL（数据查询语言）
+   
+
+2、DML（数据操作语言）
+insert update delete  是处理表中的数据
+
+3、TPL（事务处理语言）
+begin commit rollback
+
+注：手动提交 commit
+
+4、DCL（数据控制语言）
+授权
+grant revoke
+
+5、DDL（数据定义语言）
+create 
+
+6、CCL（指针控制语言）
+
+常用三种：
+DDL：数据定义
+DML：数据操作
+DCL：数据控制：grant/revoke/commit/rollback
+
+
+
+####################################################
+常见管理应用
+1、创建数据库
+create database tht_db;
+
+指定字符集
+create database tht_gbk CHARACTER SET gbk collate gbk_chinese_ci;
+
+create database tht_gbk CHARACTER SET utf8 collate utf8_general_ci;
+
+注：字符集不一至是导致数据库乱码问题的主要原因；
+在生产环境中要根据开发的要求在安装数据库时指定相应的数据库字符集；
+
+
+###################################################
+显示数据库
+show databases;
+show databases like '%gbk';
+
+查看当前数据库
+select database();
+
+
+删除数库
+
+drop database tht;
+
+连接数据库
+use tht_gbk;
+
+查表
+show tabales;
+
+删除用户
+drop user  'root'@'';
+delete from mysql.user where user='tht' and host='127.0.0.1';
+
+创建用户
+法一：
+grant all privileges on *.* to tht@'127.0.0.1' identified by '123.com';
+
+法二：
+create user 'tht1'@'localhost' identified by '123.com';
+grant create,update on *.* to 'tht1'@'localhost';
+
+grant create,update on *.* to 'tht1'@'192.168.237.0/255.255.255.0';
+
+
+查看用户权限
+show grants for 'tht'@'127.0.0.1';
+
+收回用户权限
+revoke insert on *.* from 'tht'@'127.0.0.1';
+
+
+Mysql所有权限
+
+Insert
+SELECT
+UPDATE
+DELETE
+CREATE
+DROP
+RELOAD
+SHUTDOWN
+PROCESS
+FILE
+REFERENCES
+INDEX
+ALTER
+SHOW
+DATABASES
+SUPER
+CREATE
+TEMPORARY
+TABLES
+LOCK
+TABLES
+EXECUTE
+REPLICATION
+SLAVE
+REPLICATION
+CLIENT
+CREATE
+VIEW
+SHOW
+VIEW
+CREATE
+ROUTINE
+ALTER
+ROUTINE
+CREATE
+USER
+EVENT
+TRIGGER
+CREATE
+TABLESPACE
+
+################################################
+表的操作
+create table t01(id int(4) not null,name char(10) not null,age tinyint(2) not null default "0",dept char(20));
+
+
+查看表
+show create table t01;
+mysql> show create table t01\G;
+*************************** 1. row ***************************
+       Table: t01
+Create Table: CREATE TABLE `t01` (
+  `id` int(4) NOT NULL,
+  `name` char(10) NOT NULL,
+  `age` tinyint(2) NOT NULL DEFAULT '0',
+  `dept` char(20) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1
+1 row in set (0.00 sec)
+
+
+查看建表的结构
+desc t01;
+show columns from t01;
+
+
+
+##############################################################
+为表的字段建立索引
+1、在建表的时候建索引
+
+CREATE TABLE `t02` (
+  `id` int(4) NOT NULL,
+  `name` char(10) NOT NULL,
+  `age` tinyint(2) NOT NULL DEFAULT '0',
+  `dept` char(20) DEFAULT NULL,
+  primary key(id),
+  key index_name(name)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1
+
+2、修改表添加主键
+alter table t01 change id id int primary key auto_increment;
+
+
+3、创建普通索引
+alter table t02 add index index_name(name);
+
+法二：指定创建索引的长度；
+create index index_age on t01(age(1));
+
+4、删除索引
+alter table t02 drop index index_name;
+drop index index_name on t01;
+
+5、查看索引
+show index from t01\G;
+
+
+6、创建联合索引
+create index index_age_dept on t01(age,dept)
+
+
+7、创建唯一索引
+create unique index index_name_un on t01(name);
+
+
+
+索引创建建议优化
+1、数据少的表不需要创建索引
+2、写多，读少的表不需要创建索引
+3、索引一定要在条件列上
+4、选择唯一值多的大表上创建索引
+
+
+
+########################################################
+插入数据
+insert into t01(name,age,dept)value('tanghongtao',32,'conputer');
+insert into t01(name,age,dept)value('tan',22,'conputer'),('hongs',55,'conputer');
+
+
+
+#########################################################
+查询数据
+select name,age from t01 where name='tang';
+select name,age from t01 where name='tang' and age=22;
+select name,age from t01 where name='tang' or age=22;
+select name,age from t01 limit 2;
+
+排序查询
+select name,age from t01 order by age desc/asc;
+
+联合查询
+select student.number,student.name,cures.cname,sc.grade from student,cures,sc where student.number=sc.number and cures.ckid=sc.ckid;
+
+
+查看查询语句的执行计划
+explain select * from t01 where age=30\G;
+
+
+
+*************************** 1. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: t01
+         type: ALL
+possible_keys: NULL    #可能用索引
+          key: NULL    #是否用索引
+      key_len: NULL
+          ref: NULL
+         rows: 5       #扫了多少行
+        Extra: Using where
+1 row in set (0.00 sec)
+
+ERROR: 
+No query specified
+
+mysql> explain select * from t01 where age=30\G;
+*************************** 1. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: t01
+         type: ref
+possible_keys: index_age  ############
+          key: index_age  ############
+      key_len: 1
+          ref: const
+         rows: 1         #######
+        Extra: 
+1 row in set (0.00 sec)
+
+ERROR: 
+No query specified
+
+
+####################################################
+修改表
+注,一定要加条件
+
+update t01 set age=99 where id=2;
+
+
+################################
+删除数据
+delete from t01 where id=5      ##逻辑删除,慢
+
+truncate table t01;           ##直接清空文件,快
+
+
+加-U参数防止用户误操作,
+可以使用别名,
+alias mysql="mysql -U"
+
+
+
+#####################################
+添加一个字符
+alter table t02 add sex char(2);
+
+
+更改表名
+rename table t01 to t03;
+
+alter table t01 rename to t04;
+
+
+
+

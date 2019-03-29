@@ -1,0 +1,20 @@
+﻿#在生产环境中需要使用统一权限
+#在服务端配置
+groupadd www -g 501
+useradd www -u 501 -g www -M -s /sbin/nologin
+id www
+
+mkdir /wwwfile
+chown -R www.www /wwwfile
+echo "#www Server file" >> /etc/exports
+echo "/wwwfile 192.168.237.*(rw,sync,all_squash,anonuid=501,anongid=501)" >>/etc/exports
+echo "/wwwfile web01(rw,sync,all_squash,anonuid=501,anongid=501)" >>/etc/exports
+exportfs -vr
+
+#在客户端也需要有相应的用户
+groupadd www -g 501
+useradd www -u 501 -g www -M -s /sbin/nologin
+id www
+
+mkdir /video
+mount -t nfs 192.168.237.14:/wwwfile /video

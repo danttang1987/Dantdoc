@@ -1,0 +1,12 @@
+ps -ef                              查看运行的进程
+free -g                          查看内存使用情况
+df -h	查看磁盘使用情况
+fdisk -l    查看磁盘及分区
+parted /dev/sda print   查看磁盘分区及分区表格式
+watch  同期性执行程序，默认2秒 -n指定间隔时间
+
+停止Mysql数据库
+正确方法是，进入mysql的bin目录下，然后执行
+./mysqladmin -uroot -p shutdown然后输入你的密码就可以了。
+ps:当然，如果你的root没有密码，就不需要-p选项喽。
+ps:有人问启动的方法，正确的启动方法是：进入mysql的bin目录，然后nohup ./mysqld_safe &就可以了。

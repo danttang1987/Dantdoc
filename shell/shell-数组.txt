@@ -1,0 +1,27 @@
+shell-数组
+定义：
+array=(value1 value2 value3)
+array=([1]=one [2]=two [3]=three)
+array[1]=a
+array[2]=b
+array[3]=c
+array=($(ls)) 或array=(`ls`)
+
+访问：
+echo ${array[*]}
+[tht@d03 ~]$ echo ${array[1]}
+value2
+[tht@d03 ~]$ echo ${array[0]}
+value1
+[tht@d03 ~]$
+
+
+输出无数个数
+echo ${#array[@]}
+
+
+删除元数
+unset array[1]
+
+截取元数
+echo ${array[@]:0:2}

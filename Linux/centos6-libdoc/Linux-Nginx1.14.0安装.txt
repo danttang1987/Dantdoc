@@ -1,0 +1,44 @@
+#Nginx的安装
+#1、修改主机名，IP配置、host文件
+
+sed -i '/HOSTNAME=/d;1aHOSTNAME=web02' /etc/sysconfig/network
+sed -i '/IPADDR=/d;/NETMASK/iIPADDR=192.168.237.11' /etc/sysconfig/network-scripts/ifcfg-eth0
+echo "192.168.237.10    web01" >> /etc/hosts
+echo "192.168.237.11    web02" >> /etc/hosts
+
+#2、安装依赖包
+yum install pcre pcre-devel openssl-devel -y
+
+
+#3、下载依赖包
+useradd www -s /sbin/nologin -M
+mkdir /home/tht/tools -p
+cd /home/tht/tools
+wget http://nginx.org/download/nginx-1.14.0.tar.gz
+
+#4、解压后编译安装
+tar xf nginx-1.14.0.tar.gz
+cd nginx-1.14.0
+./configure --user=www --group=www --prefix=/application/nginx-1.14.0/ --with-http_ssl_module  --with-http_stub_status_module
+make
+make install
+ln -s /application/nginx-1.14.0/ /application/nginx
+
+#5、备份配置文件，并清理配置文件
+cp nginx.conf{,.ori}
+cat nginx.conf.ori | egrep -v "#|^$" >nginx.conf
+/application/nginx/sbin/nginx -t
+
+#6、启动nginx
+/application/nginx/sbin/nginx
+netstat -lntup | grep 80
+lsof -i :80
+
+#7、停止Nginx
+pkill nginx
+
+#8、查看Nginx编译时的参数
+/application/nginx/sbin/nginx -V
+
+
+

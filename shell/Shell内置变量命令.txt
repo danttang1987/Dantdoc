@@ -1,0 +1,86 @@
+shell 内置变量命令
+1、echo
+
+	echo 参数：
+		-n:不换行输出内容
+		-e：解析转义字符
+	
+	转义字符：
+		\n   换行
+		\r   回车
+		\t   制表符
+		\b   退格
+		\v   纵向制表符
+
+	示例：		
+	[root@d03 shell]# echo "zishan is ";echo "is this"
+	zishan is 
+	is this
+	[root@d03 shell]# echo -n "zishan is ";echo "is this"
+	zishan is is this
+	[root@d03 shell]# 
+	
+	[root@d03 shell]# echo "zishan1\tzishan2\nzishan3\nzishan4"   
+	zishan1\tzishan2\nzishan3\nzishan4
+	[root@d03 shell]# echo -e "zishan1\tzishan2\nzishan3\nzishan4"
+	zishan1 zishan2
+	zishan3
+	zishan4
+	
+	[root@d03 shell]# printf "zishan1\tzishan2\nzishan3\nzishan4"
+	zishan1 zishan2
+	zishan3
+	zishan4[root@d03 shell]# 
+	
+2、eval
+	eval args
+   当shell程序执行到eval语句时，shell读入参数args,并将它们组成新的命令，然后执行。
+   示例：
+	[root@d03 shell]# cat noeval.sh 
+	#!/bin/bash
+	echo \$$#
+	[root@d03 shell]# sh noeval.sh args1 args2
+	$2
+	
+	
+	[root@d03 shell]# cat eval.sh 
+	#!/bin/bash
+	eval "echo \$$#"        ##当使用eval后，将后面的参数组成一个命令执行
+	[root@d03 shell]# sh eval.sh args1 args2  
+	args2
+	[root@d03 shell]#
+	
+3、exec
+	功能：能在不创建新的子进程的前提下，转去执行指定的命令，当指定的命令执行完毕后，该进程就终止了。
+	
+	例如：
+	[root@d03 shell]# exec date
+	2019年 03月 10日 星期日 21:24:48 CST
+	[tht@d03 ~]$      ##执行完成后退出当前进程
+	
+	exec 与read命令处理文件
+	示例：
+	[root@d03 shell]# seq 5 > /tmp/tmp.log
+	[root@d03 shell]# cat exec.sh 
+	#!/bin/bash
+	exec </tmp/tmp.log
+	while read line
+	do
+			echo $line
+	done
+	echo OK
+	[root@d03 shell]# sh exec.sh 
+	1
+	2
+	3
+	4
+	5
+	OK
+	[root@d03 shell]# 
+
+4、read
+	功能：从标准输入读取字符串，并传给shell程序内部定义的变量
+	
+
+5、shift
+	功能：重新命名所有位置参数，如执行一次，原有的$3变$2， $2变$1

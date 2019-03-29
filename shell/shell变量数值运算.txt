@@ -1,0 +1,107 @@
+变量的数值运算
++、-
+*、/、%
+**
+++、--
+！、&&、||
+<、>、<=、>=
+==、!=、=
+>>、<<
+~、|、&、^
+=、+=、-=、*=、/=、%=
+
+运算命令
+(())：用于整数运算的常用运算符，效率很高
+let：用于整数运算与(())类似
+expr：可用于整数运算，但还有很多其他功能
+bc：linux下的一个计算器，（适合整数和小数）
+$[]：用于整数运算
+awk：用于整数和小数
+declare：
+
+1、(())
+	((i=i+1))      ##
+	i=$((i+1))     ##
+	((8>7&&5==5))  ##
+	echo $((2+1))  ##
+	
+	
+	if ((8>7&&5==5))
+	then
+		echo yes
+	fi
+2、let
+	let a=1+1
+	let a=a+a
+
+总结：在(())和let中引用变量，不需要加$符号。
+
+3、expr命令的用法
+	expr 2 + 2
+	expr 2 \* 2
+	
+	[root@d03 shell]# expr a + 1
+	expr: 参数数目错误
+	[root@d03 shell]# echo $?
+	2
+	[root@d03 shell]# expr $a + 1
+	33
+	[root@d03 shell]# echo $?
+	0
+	[root@d03 shell]#
+	
+总结：在expr中引用变量需要加$符号，同时expr可用于判断变量是否为整数。
+	
+	示例：
+	[root@d03 shell]# cat expr.sh 
+	#!/bin/bash
+	expr $1 + 1 >/dev/null 2>&1
+	[ $? -eq 0 ] && echo int || echo chars
+	
+	[root@d03 shell]# sh expr.sh zishan
+	chars
+	[root@d03 shell]# sh expr.sh 10
+	int
+	[root@d03 shell]# 
+
+	示例二：match使用
+	[root@d03 shell]# expr match "222" "[0-9][0-9]*$" 
+	3
+	[root@d03 shell]# 
+	
+	[root@d03 shell]# cat expr1.sh 
+	#!/bin/bash
+	if [[ `expr match "$1" "[0-9][0-9]*"` == 0 ]]
+	then
+			echo "$1 is not num"
+	else
+			echo "$1 is num"
+	fi
+	
+	[root@d03 shell]# sh expr1.sh 20
+	20 is num
+	[root@d03 shell]# sh expr1.sh tt
+	tt is not num
+	[root@d03 shell]# 
+
+	示例三：使用expr判断文件扩展名
+	[root@d03 shell]# cat expr2.sh 
+	#!/bin/bash
+	if expr "$1" : ".*\.pub" > /dev/null 2>&1
+	then
+			echo "you are using $1"
+	else
+			echo "pls use *.pub file"
+	fi
+	[root@d03 shell]# sh expr2.sh abc.pub
+	you are using abc.pub
+	[root@d03 shell]# sh expr2.sh abc.txt
+	pls use *.pub file
+	[root@d03 shell]#
+	
+	
+
+
+
+
+

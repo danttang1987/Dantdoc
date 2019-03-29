@@ -1,0 +1,26 @@
+运维自动化发展-服务化（API）
+
+
+DNS web管理   bind-DLZ        #DNS-API
+负载均衡Web管理               #SLB-api
+Job管理平台                   #job-api
+监控平台  zibbix              #zibbix-api
+操作系统安装平台  cobbler     #cobbler-api
+部署平台       deploy         #deploy-api
+配置管理   saltstack          #saltstack-api
+自动化测试平台                #test-api
+
+
+
+1、调用cobbler-api安装操作系统
+2、调用saltstack-api进行系统初始化
+3、调用Dns-api  解析主机名
+4、调用zabbix-api 将该新上线的机器加上监控
+5、在次调用saltstack-api 部署软件
+6、调用deploy-api将当前版本的代码部署到服务器上
+7、调用test-api测试当前服务运行是否正常
+8、调用slb-api将该节点加入集群
+
+
+
+

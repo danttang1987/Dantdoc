@@ -1,0 +1,126 @@
+内存理解
+可以使用info memory
+
+127.0.0.1:6379> info memory
+# Memory
+used_memory:821728                  ##Redis内存分配器分配内存总量，也就是内部存储的所有数据占用内存量   
+used_memory_human:802.47K           ##used_memory的可读格式
+used_memory_rss:7774208             ##从操作系统角度显示Redis进程占用物理内存总量
+used_memory_rss_human:7.41M         ##used_memory_rss的可读格式
+used_memory_peak:821728             ##内存最大用量，表示used_memory的峰值
+used_memory_peak_human:802.47K      ##used_memory_peak的可读格式
+total_system_memory:1027067904      ##
+total_system_memory_human:979.49M   ##
+used_memory_lua:37888               ##lua引擎所消耗的内存大小
+used_memory_lua_human:37.00K        ##used_memory_lua的可读格式
+maxmemory:0                         ##
+maxmemory_human:0B                  ##
+maxmemory_policy:noeviction         ##
+mem_fragmentation_ratio:9.46        ##used_memory_rss/used_memory，表示内存碎片率
+mem_allocator:jemalloc-4.0.3        ##Redis所使用的内存分配器。默认为jemalloc
+
+used_memory_rss/used_memory的值mem_fragmentation_ratio如果大于1表示有内存碎片，如大很多表示碎片率严重；
+                                                       如果小于1表示Redis使用内存交换分区。
+
+内存消耗
+
+	自身内存：
+	对象内存：存储数据，也是最大的一块
+	缓冲内存：包括客户端缓冲区、复制积压缓冲区、aof缓冲区
+		客户端缓冲区分为输入和输出，输入无法控制，最大1GB，如超过将断开连接；输出分为普通、从客户端、订阅客户端可通过client-output-buffer-limit设置
+		复制积压缓冲区：通过repl-backlog-size设置复制积压缓冲区大小，默认1MB，建议设置成100MB，可有效避免全量复制。
+	内存碎片：Redis默认使用jemalloc分配内存，也可使用glibc/tcmalloc
+		出现原因：频繁复制、大量过期键删除
+		解决方法：数据对齐、安全重启
+		
+子进程消耗
+	1、redis子进程并不需要消耗1倍的父进程内存
+	2、需要设置sysctl vm.overcommit_memory=1,允许内核可以分配所有物理内存，防止Redis进程执行fork时因系统内存不足而失败
+	3、关闭THP
+	
+	
+内存管理：
+
+	设置内存上限：
+		用于缓存场景，当超过内存上限maxmemory时使用LRU等删除策略释放空间
+		防止所有内存超过服务器内存。
+		
+	动态调整内存上限：
+		config set maxmemory 6GB
+		
+		
+内存回收策略
+
+	1、删除过期键对象：使用惰性删除和定时任务删除机制
+		惰性删除：客户端读取带有超时属性的建时，如果已经超过键设置的过期时间，会执行删除，并返回空。
+		定时任务删除：redis内部维护一个定时任务，默认为每秒运行10次，通过配置hz控制
+	2、内存溢出控制策略
+		当Redis所用内存达到maxmemory上限时会触发溢出的控制重置，具体重置受maxmemory-policy参数控制，支持6种策略
+			noeviction   默认策略，不会删除任何数据，拒绝所有客户端写入操作，交返回错误信息
+			volatile-lru   根据LRU算法删除设置超时属性的键，直到腾出足够空间为止
+			allkeys-lru    根据LRU算法删除，不管数据有没有设置超时，直到腾出足够空间为止
+			allkeys-random  随机删除所有键，直到腾出足够空间为止
+			volatile-random  随机删除过期键，直到腾出足够空间为止
+			volatile-ttl    根据键值对象的TTL属性，删除最近将要过期数据，如果没有回退到noeviction
+		
+		可通过info status查找evicted_keys指标找出Redis服务器已经剔除的键数量
+		
+		建议：在线上Redis服务器避免频繁内存开销，对于要收缩Redis内存场景，可以通过调小maxmemory来实现快速回收，一般用于缓存场景。
+		
+内存优化
+	1、redisObject对象
+		Redis所有数据都是以redisObject对象存储，对象字段说明：
+			type字段：表示当前数据类型
+			encoding字段：表示Redis内部编码
+			lru字段：记录对象最后一次被访问时间
+		提示：可以通过scan+object idletime 命令批量查询哪是键长时间没有被访问，
+			refcount字段：记录当前对象被引用次数，可通过引用次数回收内存，当refcount=0时，可以安全回收。
+			ptr字段：与对象的数据内容相关，如是整数，直接存储数据，否则表示指向数据的指针，如果值的字符串长度<=39字节的数据，内部编码为embstr类型，字符串与redisobject一起分配，从而只需要一次内存操作
+			高并发写入场景中，建议字符串长度尽量控制在39字节以内，从而提高性能
+
+	2、缩减键值对象
+		降低Redis内存使用的最直接的方式就是缩减键和值的长度：
+		如：user:{uid}:friends:notify:{fid}可以简化为u:{uid}:fs:nt:{fid}
+		
+	3、共享对象池
+		共享对象池是指Redis内部维护0-9999的整数对象池。
+		整数对象池在Redis中通过变量REDIS_SHARED_INTEGERS,不能通过配置修改
+		当设置maxmemory,并启用LRU相关淘汰策略后Redis禁用共享内存池。
+		通过如下命令可以查找是启用共享池
+		object refcount <key>,查看Key的引用次数，如不是一次表示使用共享池
+		
+	4、字符串优化
+		1）尽量减少字符串频繁修改操作如：append/setrange，改为直接使用set修改字符串，降低预分配带来的内存浪费和内存碎片化。
+		2）字符串重构：不一定把每份数据作为字符串整体存储，如json,可使用hash结构或二级结构；
+	5、编码优化
+		可使用object encoding {key}来获得key的编码；
+		每种数据类型都有相应参数控制编码。
+		
+		1）ziplist编码：ziplist编码主要是为了节约内存。（追求空间和时间的平衡）
+		提示：如对性能要求较高的场景，ziplist建议长度不要超过1000，每个元素大小控制在512字节以内
+		      命令平均耗时使用inof commandstats命令获取
+		
+		2）intset编码：是集合set中的一种，内部表现为存储有序、不重复的整数集。当集合只包含整数，且长度不超过set-max-intset-entries配置时被启用
+		提示：使用inset编码的集合时，尽量保持整数范围一致。防止个别大整数触发集合升级，产生内存浪费；
+	6、控制键的数量
+		可利用数据结构减少内存使用，如使用hash保存多个Key,减少键的数量；
+		
+		
+内存优化技巧：
+1、hash类型节省内存的原理是使用ziplist编码，如使用hashtable编码方式，反面会增内存的消耗
+2、ziplist长度需要控制在1000以内，否则长列表会导致CPU消耗严重
+3、ziplist适合存储小对象，对于大对象不但内存优化效果不明显还会增加命令操作耗时；
+4、需要预估键的规模，从而确定每个hash结构需要存储的元素数量；
+5、根据hash长度和元素大小，调整hash-max-ziplist-entries和hash-max-ziplist-value参数
+
+关于hash键和field键的设计：
+1、当键离散度较高时，可以按字符串位截取，把后三位作为哈希的field,
+2、当键离散度较低时，可以使用哈希算法打散 键，
+3、尽量减少hash键和field的长度
+
+
+
+		
+		
+		
+		

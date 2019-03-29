@@ -1,0 +1,30 @@
+Redis-常见异常
+
+1、内存陡增
+    现象：redis内存突然增涨很多
+    1）分析原因
+	    使用dbsize查看主键个数，确认主和从是否一致；
+	    使用info clients命令查看客户端的缓冲区
+	    使用redis-cli client list | grep -v "omem=0"
+	        查询输出缓冲区不为0的
+	2）处理方法：
+	    使用client kill杀掉有问题的客户端
+		
+	3）后期处理
+	    禁止使用monitor命令，可以使用rename-command命令将monitor命令改成一个随机的字符串
+		限制输出缓冲区大小；
+		
+2、客户端周期性超时
+    现象：客户端出现大量超时，经过分析发现是周期性的超时
+	1）分析原因
+	    网络原因：查网络是否稳定
+		Redis服务本身：查Redis日志，对日志进行统计
+		客户端：将超时时间与慢查询日志对应，发现只要有慢查询出现就会有大量连接超时，
+		发现有一个周期性的慢查询hgetall user_fan_hset_sort，user_fan_hset_sort有200个元素
+		hlen user_fan_hset_sort
+		
+	2）处理方法：
+	    监控慢查询
+		与应用人员沟通，正确使用；
+
+		

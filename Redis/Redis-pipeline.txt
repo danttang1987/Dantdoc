@@ -1,0 +1,8 @@
+pipeline
+
+pipeline概念
+将一组Redis命令组装，通过一次RTT传送给Redis，Redis在将结果按顺序返回给客户端
+Redis-cli命令的--pipe参数就是使用pipeline，如下：
+
+echo -en '*3\r\n$3\r\nset\r\n$5\r\nhello\r\n$5\r\nnword\r\n*2\r\n$4\r\nincr\r\n$7\r\ncounter\r\n' | redis-cli -p 6380 --pipe
+

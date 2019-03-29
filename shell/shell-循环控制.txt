@@ -1,0 +1,5 @@
+shell-循环控制
+break n      跳出循环，n表示跳出循环的层数，省略表示跳出所有循环
+continue n   跳过本次循环，n表示退到第几层循环
+exit
+return

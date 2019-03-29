@@ -1,0 +1,10 @@
+增量备份恢复
+mysqlbinlog    解构mysql Binlog的日志
+-d 数据库名，从binlog中只提出指定数据库的内容
+
+mysqlbinlog /data/3307/mysql-binlog.00032 -d tang_db -r tang_db.binlog.0032.sql
+
+
+mysqlbinlog /data/3307/mysql-bin.000036 --start-position=787 --stop-position=895 -r /root/mysql-bin-post.sql
+
+mysqlbinlog /data/3307/mysql-bin.000036 --start-datetime='2018-12-13 22:06:31' --stop-datetime='2018-12-13 22:07:42' -r /root/mysql-bin-post.sql

@@ -1,0 +1,117 @@
+字符集问题
+1、在登录mysql后使用set names ***修改会话字符集为库表的字符集后，可以正常插入，防止乱码；
+set names latin1
+
+
+2、在使用mysql导入时使用参数--default-character-set=***为库表的字符集后，可以防止乱码；
+--default-character-set=latin1
+
+
+3、source  sql.sql  在sql文件中添加set names latin1；
+
+4、mysql 导入ql文件中添加set names latin1；
+
+5、在服务端、客户端，系统中配置与库表字符集一至；
+
+-、服务端操作系统；
+[root@db03 init.d]# cat /etc/sysconfig/i18n 
+LANG='zh_CN.UTF-8'
+
+二、客户端或修改配置文件
+set names UTF-8   临时
+或
+修改配置文件    永久
+default-character-set=utf8
+
+三、服务端，修改配置文件
+default-character-set=utf8
+characater-set-server=utf8
+
+
+四、指定字符集建库
+查看字符集的校对规划
+show character set;
+
+create database t_db DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci
+
+
+设置变量：
+show variables;
+show variables like 'innodb%';
+show global variables;
+set global key_buffer_size=20480
+
+要总结下面几个命令
+mysqldump
+mysqlbinlog
+mysql
+mysqladmin
+
+
+
+
+查看字符集设置
+show variables like 'chara%';
+mysql> show variables like 'chara%';  
++--------------------------+------------------------------------------+
+| Variable_name            | Value                                    |
++--------------------------+------------------------------------------+
+| character_set_client     | utf8                                     |
+| character_set_connection | utf8                                     |
+| character_set_database   | latin1                                   |
+| character_set_filesystem | binary                                   |
+| character_set_results    | utf8                                     |
+| character_set_server     | latin1                                   |
+| character_set_system     | utf8                                     |
+| character_sets_dir       | /application/mysql5.5.61/share/charsets/ |
++--------------------------+------------------------------------------+
+8 rows in set (0.00 sec)
+
+以下三个字符集是客端字符集，默认是系统字符集；
+character_set_client 
+character_set_connection
+character_set_results 
+
+
+
+总结：
+1、保证mysql客户端字符集与数据库字符集保持一至；
+2、客户端字符集默认为操作系统的字符集；
+3、客户端字符集修改方法如下：
+  1）修改配置文件my.cnf中的[client]default-character-set=utf8
+  2）登录客户后执行set names utf8
+  3）登录数据库时添加--default-character-set=utf8
+  4）程序端的字符集设置
+4、mysql服务的字符集配置方法如下：
+  1）my.cnf中mysql中配置character_set_server=utf8,注：不同的版本配置参数可能不一样；
+  2）set global character_set_server=utf8; 
+5、注意需要修改Linux客户端和应用程序的字符集；
+
+
+#######################################################################
+修改现有数据库的字符集
+1、不能使用alert修改数据库，不会对已有数据生效，只对新的数据生效；
+2、将数据库和表结构导出，并修改字符集；
+（mysqldump -uroot -p123.com -S /data/3307/mysql.sock --default-character-set=latin1 -d tang_db>/root/tang_db-s.sql）
+在用sed命令替换
+--default-character-set=latin1   ##设置客户端字符集
+-d tang_db                       ##只导出数据及表结构
+-B                               ##导出建库语句
+3、导出所有数据；
+（mysqldump -uroot -p123.com -S /data/3307/mysql.sock --default-character-set=latin1 --quick --no-create-info --extended-insert tang_db>/root/tang_db-d.sql）
+并修改sql文件（增加:
+set names utf8;
+use tang_db;
+
+备份参数说明：
+--quick    用于转储大的表
+--no-create-info    不创建Create Table语句
+--extended-insert    使用多行insert语法
+4、修改Mysql服务端和客户端为改后的字符集；
+5、删除原有数据；
+6、导入数据库和表结构（使用msql命令导入）
+mysql  -uroot -p123.com -S /data/3307/mysql.sock </root/tang_db-s.sql
+mysql  -uroot -p123.com -S /data/3307/mysql.sock </root/tang_db-d.sql
+7、导入数据
+
+

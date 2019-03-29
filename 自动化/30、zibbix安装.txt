@@ -1,0 +1,13 @@
+30、zibbix安装
+
+3.10.0-957.el7.x86_64
+
+
+http://www.aclstacl.com/284.html
+
+rpm -ivh http://mirrors.aliyum.com/zabbix/zabbix/3.0/rhel/7/x86_64/zabbix-release-3.0-1.el7.noarch.rpm
+
+rpm -ivh https://mirrors.aliyun.com/zabbix/zabbix/4.1/rhel/7/x86_64/zabbix-release-4.1-1.el7.noarch.rpm
+
+yum install zabbix-server zabbix-web zabbix-agent zabbix-server-mysql  zabbix-web-mysql mariadb-server mariadb -y
+

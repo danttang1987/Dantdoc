@@ -1,0 +1,43 @@
+sentinel-API
+sentinel节点是一个特殊的redis节点，它有自己的API
+1、sentinel masters  
+	查看所有master信息
+
+2、sentinel master <master-name>
+	查看指定的maste信息
+	
+3、sentinel slaves <master-name>
+	查看指定master的从节点信息
+
+4、sentinel sentinels <master-name>
+	查看指定master节点的sentinel节点
+	
+5、sentinel get-master-addr-by-name <master-name>
+	查看指定master的IP和端口
+	
+6、sentinel reset <pattern>（通配符）
+	重置<pattern>（通配符）主节点的配置。
+	
+7、sentinel failover <master-name>
+	对指定master主节点进行强制故障转移，不会与其他Sentinel节点协商，完成转移后其他节点会更新自身配置。
+	
+8、sentinel ckquorum <master-name>
+	检测当前可达的sentinel节点的总数。
+	
+9、sentinel flushconfig
+	将sentinel节点配置文件强制刷新到磁盘上
+	
+10、sentinel remove <master-name>
+	取消对当前Master节点的监控
+	
+11、sentinel monitor <master-name> <IP> <port> <quorum>
+	与配置文件一样，只是通过命令完成对master的监控
+	
+12、sentinel set <master-name>
+	动态修改sentinel配置
+	
+13、sentinel is-master-down-by-addr 
+	用于在sentinel之间交换master是否下线的判断
+	
+
+	

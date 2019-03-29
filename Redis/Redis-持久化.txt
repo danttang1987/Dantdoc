@@ -1,0 +1,197 @@
+Redis-持久化
+
+redis支持两种持久化方式
+RDB
+AOF
+
+一、RDB
+    RDB是把当前进行数据生成快照，保存到硬盘的过程，可以手动或自动方式进行
+	
+	1、触发机制
+	   1）save命令：阻塞当前Redis服务器，直到RDB过程完成为止，对于内存比较大的实例造成长时间的阻塞，线上环境不建议使用
+	   运行save命令，日志中会出现*DB saved on disk
+	        1251:M 21 Dec 16:47:30.294 * DB saved on disk
+			
+			
+	   2）bgsave命令：对save阻塞进行优化，
+	        1251:M 21 Dec 16:46:44.963 * Background saving started by pid 3091
+            3091:C 21 Dec 16:46:44.971 * DB saved on disk
+            3091:C 21 Dec 16:46:44.973 * RDB: 6 MB of memory used by copy-on-write
+            1251:M 21 Dec 16:46:45.065 * Background saving terminated with succes
+	        
+	   3）自动触发
+	        使用配置
+			save m n :表示在m秒内出现n次修改就触发bgsave
+	   
+	   4）如果从节点执行全量复制操作，主节点自动执行bgsave生成RDB文件并发送给从节点。
+	   5）执行debug reload命令重新加载Redis时，也会自动触发save操作
+	   6）如没有开启AOF，在执行shutdown命令时会执行bgsave
+	   
+	2、流程说明：
+	    1）执行bgsave命令，父进程判断当前是否存在正在执行的子进程，如：RDB\AOF，如有直接返回
+		2）父进程执行fork操作创建子进程，fork操作过程中父进程会阻塞，可通过info stats查看last_fork_usec，获取最近一次fork耗时（微秒）
+		  [root@redis01 ~]# redis-cli info stats | grep fork
+          latest_fork_usec:1224
+		3）父进程完成fork，bgsave返回“Background saving started”，不在阻塞父进程，可以继续响应其他命令
+		4）子进程创建RDB文件，根据父进程内存生成的临时快照文件，完成对原有文件进行原子替换，
+		    lastsave命令可获得最后一次RDB生成的时间，对应info的rdb_last_save_time
+			[root@redis01 ~]# redis-cli info | grep rdb
+            rdb_changes_since_last_save:0
+            rdb_bgsave_in_progress:0
+            rdb_last_save_time:1545382050
+            rdb_last_bgsave_status:ok
+            rdb_last_bgsave_time_sec:1
+            rdb_current_bgsave_time_sec:-1
+		5）子进行发送信号给父进程，表示完成，父进程更新统计信息具体见info persistence
+		    [root@redis01 ~]# redis-cli info persistence
+            # Persistence
+            loading:0
+            rdb_changes_since_last_save:0
+            rdb_bgsave_in_progress:0
+            rdb_last_save_time:1545382050
+            rdb_last_bgsave_status:ok
+            rdb_last_bgsave_time_sec:1
+            rdb_current_bgsave_time_sec:-1
+            aof_enabled:0
+            aof_rewrite_in_progress:0
+            aof_rewrite_scheduled:0
+            aof_last_rewrite_time_sec:-1
+            aof_current_rewrite_time_sec:-1
+            aof_last_bgrewrite_status:ok
+            aof_last_write_status:ok
+		
+	3、RDB文件的处理
+	
+	    1）修改保存位置
+	         修改dir的目录后重新执行bgsave，将进行目录切换，同样方法也用于AOF
+	         redis-cli config set dir /data
+			 
+		2）压缩：Redis默认使用LZF算法对RDB进行压缩，可通过如下命令配置
+		    config set rebcompression yes/no
+		
+		3）校验：如果加载损坏的RDB文件时拒绝启动，提示如下报错：
+		    #Short read or OOM loading DB.Unrecoverable error aborting now
+			可以使用redis-check-dump工具检测
+			
+	4、RDB优缺点
+	    优点：
+		RDB是一个紧凑的压缩二进制文件，非常适用于备份，全量复制等场景
+		RDB恢复数据快于AOF方式
+		
+		缺点：
+		RDB没办法做到实时持久化/秒级持久化
+		RDB是一个紧凑的压缩二进制文件，可能在其他Redis版本中无法使用。
+		
+二、AOF
+    AOF（append only file）:以独立日志的方式记录每次写命令，重启时再重新执行AOF文件中的命令，达到恢复数据的目的。是最主流的持久化方式兼顾了安全的性能
+	
+    1、使用AOF
+	    开启AOF 需要设置配置：appendonly yes，默认不开启,默认文件名为appendonly.aof
+		工作流程：命令写入——AOF缓冲区——在写入AOF文件——Rewrite文件
+		
+	2、命令写入
+	    使用Redis协议文本格式写入AOF_buf中，
+		
+	3、 文件同步（将aof_buf中的数据同步到文件）
+	    Redis提供多种AOF缓冲区同步文件的策略，由appendfsync控制，值如下：
+		always:  命令写入aov_buf后调用系统fsync操作同步到AOF文件中，fsync完成后线程返回；
+		everysec:   命令写入aof_buf后调用系统write操作，write操作完成后线程返回，fsync同步文件操作是由专门的线程每秒调用一次；
+		no:  命令写入AOF_buf后调用 系统的write操作，不对aof文件做fsync同步，同步到硬件由操作系统负责。通常同步周期最长为30秒；
+		
+	4、 重定机制
+	    AOF重写是把Redis进程内的数据转化为写命令同步到新的AOF文件的过程；
+		重写后的AOf文件将变小：
+		1）进程内已经超时的数据不在写入；
+		2）旧的AOF文件含无效命令，重写后的数据只包含有效数据；
+		3）多条写命令可以合并为一个；
+		
+		好处：
+		1）降低AOF文件占用的空间；
+		2）加快AOF文件加载的速度；
+		
+		重写的触发：
+		1）手动：直接使用bgrewriteaof
+		2）自动：根据auto-aof-rewrite-min-size和auto-aof-rewrite-percentage
+		auto-aof-rewrite-min-size   表示运行AOF时文件最小的体积
+		auto-aof-rewrite-percentage   表示当前AOF空间（aof_current_size）和上次重写AOF后空间(aof_base_size)的比值；
+		[root@redis01 ~]# redis-cli info persistence | grep aof
+        aof_enabled:1
+        aof_rewrite_in_progress:0
+        aof_rewrite_scheduled:0
+        aof_last_rewrite_time_sec:1
+        aof_current_rewrite_time_sec:-1
+        aof_last_bgrewrite_status:ok
+        aof_last_write_status:ok
+        aof_current_size:98
+        aof_base_size:98
+        aof_pending_rewrite:0
+        aof_buffer_length:0
+        aof_rewrite_buffer_length:0
+        aof_pending_bio_fsync:0
+        aof_delayed_fsync:0
+		
+		重写过程：
+		1）执行AOF重写请求
+		2）父进程执行fork操作创建子进程，fork操作过程中父进程会阻塞，可通过info
+		3.1）主进程Fork操作完成后，断续响应其他命令，将所有修改的命令依然写入AOF缓冲区并，根据appendfsync策略同步到硬盘。
+		3.2）由于fork操作运用写时复制技术，子进程只能共享fork操作时内存数据，由于父进程依然响应命令，Redis使用AOF重写缓冲区保存部分数据。
+		4）子进程根据内存快照，按照命令合并规则写入到新的AOF文件，每次写入数据量由于配置“aof-rewrite-incremental-fsync”控制，默认为32MB
+		5.1）新的AOF文件写入完成后，子进程发送信号给父进程，父进程更新统计信息，查看 info persistence aof_*
+		5.2）父进程把AOF重写缓冲区的数据写入到新的AOF文件中；
+		5.3）使用新的AOF文件替换老文件，完成AOF重写。
+		
+
+三、问题定位与优化
+	1、 fork操作
+	    使用虚拟化Xen虚拟机fork更慢
+		正常情况下Fork操作应该在20毫秒每GB左右，可通过info stats统计中查看latest_fork_usec（微秒）
+		  [root@redis01 ~]# redis-cli info stats| grep fork
+          latest_fork_usec:1017
+		优化：
+		1）优化使用物理机或高效支持fork操作的虚拟化技术，不要使用Xen
+		2）控制每个实例的最大可用内存，建议在10GB以内；
+		3）合理配置Linux内存分配策略，避免物理内存不足导致fork失败；
+		4）降低Fork操作的频率；适度放宽AOF自动触发重写的条件，避免不必要的全量复制；
+	2、子进程开销监控和优化
+	    1）、CPU
+		    CPU开销分析：子进程负责把内存数据分批写入文件，这个过程是CPU密集操作，通常单核复用率接近90%
+			CPU消耗：Redis是CPU密集型服务，不要做绑定单核操作。不然子进程会与父进程产生竞争；
+			不要和其他密集型服务部署在一起；
+			如是多实例，尽量保证同一时刻只有一个子进程在执行重写。
+		2）、内存
+		    内存消耗分析，可通过日志查看AOF和RDB在重写过程中的内存使用情况
+			1925:C 24 Dec 15:04:52.453 * AOF rewrite: 6 MB of memory used by copy-on-write
+			1248:M 24 Dec 15:04:52.475 * Residual parent diff successfully flushed to the rewritten AOF (22.0 MB)
+			1931:C 24 Dec 15:05:40.412 * RDB: 6 MB of memory used by copy-on-write
+			
+			不同之处在于AOF在重写过程中还有一个重写缓冲区，AOF在重写时内存消耗为6+22=28MB
+			
+			可能过shell脚本根据Redis日志可以快速定位子进程内存过度使用；
+			
+			Linux 2.6.38以下增了THP，默认开启，开启后可以降低fork创建子进程的速度，但是会增内存的消耗。建议关闭，方法如下：
+			echo never >/sys/kernel/mm/transparent_hugepage/enabled
+			
+		3）、硬盘
+            1）不要与高磁盘负载的服务部署在一起；
+            2）aof重写时会消耗大量的IO，可以开启配置no-appendfsync-on-rewrite
+            3）对于多实例配置，建议将AOF存储在不同的硬盘上；
+    3、AOF追加阻塞
+	        主线程会对比上次fsync的时间，如果距上次同步成功时间在2秒内，主线程直接返回，否则将阻塞，直到同步完成；
+			
+			AOF阻塞问题定位：
+			1、AOF阻塞发生后通过日志，可以查看（disk is busy）
+		    2、每次发生AOF追加阻塞时，在info persistence中的aof_delayed_fsync会加一；
+			   [root@redis01 ~]# redis-cli info persistence | grep aof_de
+               aof_delayed_fsync:0
+			3、AOF同步最多允许2秒延迟，当延迟高说明硬盘的负载高。
+
+
+四、多实例部署
+			
+	通过外部程序控制AOF重写，流程：
+	1、查看所有开启的AOF的实例（aof_current_size - aof_base_size / aof_base_size）如果大于1就运行bgrewriteaof；
+	2、在过程中循环检查aof_rewrite_in_progress和aof_current_rewrite_time_sec，直到AOF结束；
+	
+		
+		
+	   

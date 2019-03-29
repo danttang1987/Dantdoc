@@ -1,0 +1,233 @@
+sed -i '/HOSTNAME=/d;1aHOSTNAME=backup' /etc/sysconfig/network
+sed -i '/IPADDR=/d;/NETMASK/iIPADDR=192.168.237.20' /etc/sysconfig/network-scripts/ifcfg-eth0
+echo "192.168.237.10    web01" >> /etc/hosts
+echo "192.168.237.11    web02" >> /etc/hosts
+echo "192.168.237.15    lb01" >> /etc/hosts
+echo "192.168.237.16    lb02" >> /etc/hosts
+echo "192.168.237.18    mem01" >> /etc/hosts
+echo "192.168.237.19    man01" >> /etc/hosts
+echo "192.168.237.20    man01" >> /etc/hosts
+
+
+#1.rsync,远程同步工具，可以在本地两个目录进行复制，核心在远程备份功能。
+#rsync的特性
+#1、支持特殊文件如下链接文件、设备文件；
+#2、可以排除文件或目录
+#3、Domain、ssh
+#4、保持文件属性
+
+
+#Rsync端口为873
+
+       Local:  rsync [OPTION...] SRC... [DEST]
+
+       Access via remote shell:
+         Pull: rsync [OPTION...] [USER@]HOST:SRC... [DEST]
+         Push: rsync [OPTION...] SRC... [USER@]HOST:DEST
+
+       Access via rsync daemon:
+         Pull: rsync [OPTION...] [USER@]HOST::SRC... [DEST]
+               rsync [OPTION...] rsync://[USER@]HOST[:PORT]/SRC... [DEST]
+         Push: rsync [OPTION...] SRC... [USER@]HOST::DEST
+               rsync [OPTION...] SRC... rsync://[USER@]HOST[:PORT]/DEST
+
+#一、local使用
+rsync -vzrtopg /etc/hosts /mnt/
+
+#--delete不要使用，只用于在服务器端与备份端完全保持一致
+rsync --delete -avz /etc/sysconfig/ /mnt/
+
+#参数：
+-v
+-z
+-r
+-t
+-o
+-p
+-g
+
+-a=-rlptgoD
+
+#常用-avz
+
+--delete
+--exclude
+--exclude-from=file
+--bwlimit
+
+#注：src中如果是目录
+
+#二、使用ssh同步
+rsync -avz /etc/hosts -e 'ssh -p 52113' tht@192.168.237.14:/home/tht
+
+
+
+#三、deamo服务
+#1、创建用户目录
+useradd -M rsync -s /sbin/nologin
+#2、配置文件
+cat >/etc/rsyncd.conf <<EOF
+uid = rsync
+gid = rsync
+use chroot = no
+max connetctions = 200
+timeout = 300
+pid file = /var/run/rsyncd.pid
+lock file = /var/run/rsyncd.lock
+log file = /var/log/rsyncd.log
+[tht]
+path = /backup/
+ignore errors
+read only = false
+list = false
+host allow = 192.168.237.0/24
+host deny = 0.0.0.0/32
+auth users = rsync_backup
+secrets file = /etc/rsync.password
+EOF
+
+#3、启动服务
+rsync --daemon
+[root@backup etc]# netstat -lntup | grep rsyn[c]
+tcp        0      0 0.0.0.0:873                 0.0.0.0:*                   LISTEN      24292/rsync         
+tcp        0      0 :::873                      :::*                        LISTEN      24292/rsync 
+
+#4、修改权限
+
+[root@backup etc]# mkdir /backup
+[root@backup etc]# chown -R rsync.rsync /backup
+
+#5、创建密码文件rsync_backup必须与配置文件中的Auth Users一样
+echo "rsync_backup:123.com" >>/etc/rsync.password
+chmod 600 /etc/rsync.password
+
+#6、加入开机启动
+echo "rsync --daemon" >>/etc/rc.local
+
+
+
+
+#四、配置客户端
+1、创建密码文件
+echo "123.com" >> /etc/rsync.password
+chmod 600 /etc/rsync.password
+
+
+2、创建本地备份目录
+
+mkdir /backup
+touch /backup/st{01..10}
+
+3、推送文件
+
+方法一：
+rsync -avz /backup/ rsync_backup@192.168.237.20::tht/ --password-file=/etc/rsync.password
+
+方法二：
+rsync -avz /backup/ rsync://rsync_backup@192.168.237.20/tht/ --password-file=/etc/rsync.password
+
+
+#多模块配置
+cat >/etc/rsyncd.conf <<EOF
+uid = rsync
+gid = rsync
+use chroot = no
+max connetctions = 200
+timeout = 300
+pid file = /var/run/rsyncd.pid
+lock file = /var/run/rsyncd.lock
+log file = /var/log/rsyncd.log
+host allow = 192.168.237.0/24
+host deny = 0.0.0.0/32
+auth users = rsync_backup
+secrets file = /etc/rsync.password
+[tht]
+path = /backup/
+ignore errors
+read only = false
+list = false
+[tht1]
+path = /backup1/
+ignore errors
+read only = false
+list = false
+EOF
+
+
+#无差异同步
+rsync -avz --delete /backup/ rsync://rsync_backup@192.168.237.20/tht/ --password-file=/etc/rsync.password
+
+#限速备份
+rsync -avz --bwlimit=100 /backup/ rsync://rsync_backup@192.168.237.20/tht/ --password-file=/etc/rsync.password
+
+#排除同步
+rsync -avz --exclude=test /backup/ rsync://rsync_backup@192.168.237.20/tht/ --password-file=/etc/rsync.password
+rsync -avz --exclude={test,st001} /backup/ rsync://rsync_backup@192.168.237.20/tht/ --password-file=/etc/rsync.password
+cat /etc/rsync.password -A
+
+#rsync优缺点
+优点：
+1、支持堷备份、支持daemon,集中备份、推拉模式
+2、支持shell通道模式
+
+缺点：
+1、大量小文件同步时，比对时间较长，有时可能会停止进程
+2、同步大文件，10G的文件可能会有问题；
+
+全网备份项目
+1、自动将需要备份的文件打包到/backup
+2、本地只保留7天的备份数据
+3、自动备份到服务器
+4、在服务器上保留180天和每周六的数据。
+
+客户端的脚本
+##################################
+#!/bin/bash
+#Create date 20181127
+#Creater TangHongTao mail:375604454@qq.com
+#backup "backupfilelist.cnf"file
+###################################
+BackupDate=`date +%Y-%m-%d-%w`
+BackupHost=`ifconfig eth0 | sed -n 's/^.*t a.*:\(.*\)  Bc.*$/\1/'p`
+BackupFileList='/server/scripts/backupfilelist.cnf'
+BackupFileName="${BackupHost}-${BackupDate}.tar.gz"
+BackupToDir=/backup/$BackupHost
+for FileName in `cat $BackupFileList`
+do
+    [ -e $FileName ] && BackupFiles="$BackupFiles $FileName"
+done
+[ -d $BackupToDir ] || mkdir -p $BackupToDir
+tar -Ppczf $BackupToDir/$BackupFileName $BackupFiles
+cd $BackupToDir && md5sum $BackupFileName >${BackupFileName}.chk
+find $BackupToDir -type f -mtime +7 -exec rm -rf {} \;
+rsync -az $BackupToDir rsync_backup@192.168.237.20::backup/ --password-file=/etc/rsync.password
+
+
+服务端的脚本
+########################
+#!/bin/bash
+#Create date 20181127
+#Creater TangHongTao mail:375604454@qq.com
+########################
+Backdir="/backup"
+BackTime=`date +%Y-%m-%d-%w`
+for Host in `ls $Backdir`
+do
+   cd $Backdir/$Host && md5sum -c ${Host}-${BackTime}.tar.gz.chk >/dev/null 2>&1
+   if [ $? -ne 0 ]
+   then
+        echo "$Host backup fail!" >>$Backdir/${BackTime}.log
+   else
+        echo "$Host backup OK!" >>$Backdir/${BackTime}.log
+   fi
+done
+find /backup -type f -mtime +180 | egrep -v ".*-6\.tar\.gz$|.*-6\.tar\.gz\.chk$" | xargs rm -f >/dev/null 2>&1
+mail -s "${BackTime} back result" 375604454@qq.com < $Backdir/${BackTime}.log
+
+
+
+删除文件也可以用find直接完成
+find /backup -type f -mtime -1 ! \( -name "*-6.tar.gz" -o -name "*-6.tar.gz.chk" \) -exec rm -rf {} \;
+
+可设置时间减一天
+date +%w -d "-1day"

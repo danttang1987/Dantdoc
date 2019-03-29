@@ -1,0 +1,26 @@
+事务与Lua
+
+
+1、事务
+Redis提供简单的事务，使用multi和exec，multi表示事务的开始，exec表示事务的结束
+在没有结束之间不会将数据保存；
+127.0.0.1:6380> multi
+OK
+127.0.0.1:6380> sadd list001 tang
+QUEUED
+127.0.0.1:6380> sadd list002 tang2
+QUEUED
+127.0.0.1:6380> exec
+1) (integer) 1
+2) (integer) 1
+127.0.0.1:6380> SISMEMBER list001 tang
+(integer) 1
+127.0.0.1:6380> 
+
+如需要停止事务使用discard命令代替exec
+
+如中间有错误命令，会创成整个事务失败；
+
+
+
+

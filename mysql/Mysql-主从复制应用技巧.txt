@@ -1,0 +1,34 @@
+#1、复制冲突，show slave status\G如下报错:
+Last_SQL_Error: Error 'Can't create database 'thtdb1'; database exists' on query. Default database: 'thtdb1'. Query: 'create database thtdb1'
+
+#方法一：可在从库上停止复制，并移动指针；
+mysql -uroot -p123.com -S /data/3308/mysql.sock -e "stop slave;"
+mysql -uroot -p123.com -S /data/3308/mysql.sock -e "set global sql_slave_skip_counter =1"
+mysql -uroot -p123.com -S /data/3308/mysql.sock -e "start slave;"
+
+#方法二：可根据错误号在my.cnf中设置跳过指定的错误；
+slave-skip-error = 1032,1062,1007  #等
+
+#2、让Mysql从库记录Binlog的应用场景
+#需要在从库的配置文件中设置如下：
+log-slave-updates
+log-bin = /data/3308/mysql-bin
+expire_logs_days = 7
+
+#3、mysql主从复制架构的备份策略
+#1）选择一个不对外提供服务的从库进行备份；
+#2）开启从库的Binlog功能
+#3）备份时只需要停止mysql线程
+stop slave sql_thread;
+
+#4、Mysql主从库复制延迟的原因及解决方法
+#问题一：主库的从库太多，导致复制延迟；
+#从库数量3-5个为宜
+#问题二：从库性能比主库差；
+#问题三：慢SQL语句过多
+#问题四：主从复制的设计问题
+#问题五：主从之间的网络延迟；
+#问题六：主库读写压力大
+
+#5、通过read-only参数让从库只读访问
+对指定all privileges和super权限的用户不生效

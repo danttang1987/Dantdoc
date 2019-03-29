@@ -1,0 +1,55 @@
+shell-liux系统优化检查
+
+
+#!/bin/bash
+[ -f /etc/init.d/functions ] &&{
+. /etc/init.d/functions
+init_func=1
+} || init_func=0
+
+function Usage(){
+	echo "Usage chk_input function:chk_input check_item check_sunt(0|1)"
+	exit 2
+}
+function chk_input(){
+	if [ $# -ne 2 ];then
+		Usage
+	fi
+	if [ $2 -eq 0 ];then
+		if [ $init_func -eq 1 ];then
+			action "$1 is not opt"    /bin/false
+		else
+			echo "$1 is not opt"
+		fi
+	elif [ $2 -eq 1 ];then
+		if [ $init_func -eq 1 ];then
+			action "$1 is opt"    /bin/true
+		else
+			echo "$1 is not opt"
+		fi
+	else
+		Usage
+	fi
+}
+
+function chk_mod_yum(){
+	if [ `cat /etc/yum.repos.d/CentOS-Base.repo | egrep "163\.com|aliyun\.com" | wc -l` -ge 1 ];then
+		chk_input "yum" 1
+	else
+		chk_input "yum" 0
+	fi
+}
+
+function chk_mod_yum(){
+	if [ `cat /etc/yum.repos.d/CentOS-Base.repo | egrep "163\.com|aliyun\.com" | wc -l` -ge 1 ];then
+		chk_input "yum" 1
+	else
+		chk_input "yum" 0
+	fi
+}
+
+
+main(){
+        chk_mod_yum
+}
+main

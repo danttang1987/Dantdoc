@@ -1,0 +1,176 @@
+sysbench介绍
+
+sysbench是一款开源的多线程性能测试工具，可以执行CPU/内存/线程/IO/数据库等方面的性能测试。
+
+数据库目前支持MySQL/Oracle/PostgreSQL。本文只是简单演示一下几种测试的用法，后续准备利用sysbench来对MySQL进行一系列的测试。具体的一些参数设置，需要根据不同的测试要求来进行调整。
+
+安装
+
+1. 下载安装包，地址 https://github.com/akopytov/sysbench
+
+#wget https://github.com/akopytov/sysbench/archive/1.0.zip -O "sysbench-1.0.zip"
+#unzip sysbench-1.0.zip
+#cd sysbench-1.0
+
+2. 安装依赖库
+
+#yum install automake libtool -y
+
+3. 开始安装
+
+#./autogen.sh
+#./configure
+#ERROR: cannot find MySQL libraries. If you want to compile with MySQL support 没找到mysql库 需要用参数指定下 --with-mysql-includes和--with-mysql-libs
+#./configure --with-mysql-includes=/alidata/server/mysql5.7/include/ --with-mysql-libs=/alidata/server/mysql5.7/lib/
+
+4. 由于是yum安装的mysql，我也不知道路径在哪里。如何查找mysql的安装路径？
+
+安装mysql-devel，才能使用mysql_config
+
+#yum install -y mysql-devel
+#mysql_config -help
+Usage: /usr/bin/mysql_config-64 [OPTIONS]
+Options:
+--cflags        [-I/usr/include/mysql -g  -fstack-protector  -m64 -fPIC  -g -fabi-version=2 -fno-omit-frame-pointer -fno-strict-aliasing]
+--cxxflags      [-I/usr/include/mysql -g  -fexceptions -fstack-protector  -m64 -fPIC  -g -fabi-version=2 -fno-omit-frame-pointer -fno-strict-aliasing]
+--include        [-I/usr/include/mysql]
+--libs          [-L/usr/lib64/mysql -lmysqlclient -lpthread -lm -lrt -ldl]
+--libs_r        [-L/usr/lib64/mysql -lmysqlclient -lpthread -lm -lrt -ldl]
+--plugindir      [/usr/lib64/mysql/plugin]
+--socket        [/var/lib/mysql/mysql.sock]
+--port          [0]
+--version        [5.6.39]
+--libmysqld-libs [-L/usr/lib64/mysql -lmysqld -lpthread -lm -lrt -lcrypt -ldl -laio -lnuma]
+--variable=VAR  VAR is one of:
+pkgincludedir [/usr/include/mysql]
+pkglibdir    [/usr/lib64/mysql]
+plugindir    [/usr/lib64/mysql/plugin]
+
+5. 再次执行config，成功
+
+# ./configure --with-mysql-includes=/usr/include/mysql --with-mysql-libs=/usr/lib64/mysql
+#make
+
+6. 执行下命令:
+
+#sysbench --help
+#sysbench: error while loading shared libraries: libmysqlclient.so.20: cannot open shared object file: No such file or directory
+#问题原因：sysbench无法找到mysql的库文件，可能是环境变量LD_LIBRARY_PATH没有设置，设置后即可解决该问题：
+#export LD_LIBRARY_PATH=/alidata/server/mysql5.7/lib/lib
+#sysbench --version
+sysbench 1.0.12 (using bundled LuaJIT 2.1.0-beta2)
+
+准备测试表和数据
+
+1. 创建测试数据库：
+
+1 mysql>create database dbtest;
+
+2. 测试命令
+
+#/home/mysql/sysbench-1.0/src/sysbench --test=/home/mysql/sysbench-1.0/tests/include/oltp_legacy/oltp.lua \
+--mysql-host=mysql-host-ip --mysql-port=3306 --mysql-user=envision --mysql-password=password \
+--mysql-db=dbtest --oltp-tables-count=10 --oltp-table-size=500000 \
+--report-interval=10 --rand-init=on --max-requests=0 \
+--oltp-read-only=off --max-time=120 --num-threads=30 \
+[ prepare | run | cleanup ]
+
+##三选一
+
+prepare 准备；
+
+run 运行；
+
+cleanup  清理数据。
+
+注意最后一行，一项测试开始前需要用prepare来准备好表和数据，run执行真正的压测，cleanup用来清除数据和表。
+
+3. 执行sysbench命令参数解释：
+
+#-test=/root/sysbench-1.0/tests/include/oltp_legacy/oltp.lua 表示调用 oltp.lua 脚本进行 oltp 模式测试
+#--oltp_tables_count=10 表示会生成 10 个测试表
+#--oltp-table-size=500000 表示每个测试表填充数据量为 500000 
+#--rand-init=on 表示每个测试表都是用随机数据来填充的
+#-num-threads=8 表示发起 8个并发连接
+#--oltp-read-only=off 表示不要进行只读测试，也就是会采用读写混合模式测试#--report-interval=10 表示每10秒输出一次测试进度报告
+#--rand-type=uniform 表示随机类型为固定模式，其他几个可选随机模式：uniform(固定),gaussian(高斯),special(特定的),pareto(帕累托)
+#--max-time=120 表示最大执行时长为 120秒#--max-requests=0 表示总请求数为 0，因为上面已经定义了总执行时长，所以总请求数可以设定为 0；也可以只设定总请求数，不设定最大执行时长
+#--percentile=99 表示设定采样比例，默认是 95%，即丢弃1%的长请求，在剩余的99%里取最大值
+
+4. 测试准备: 30个并发连接，10张表 每个表填充50W条数据 最大请求时间120s
+
+#/home/mysql/sysbench-1.0/src/sysbench --test=/home/mysql/sysbench-1.0/tests/include/oltp_legacy/oltp.lua \
+--mysql-host=mysql-host-ip --mysql-port=3306 --mysql-user=envision --mysql-password=password \
+--mysql-db=dbtest --oltp-tables-count=10 --oltp-table-size=500000 \
+--report-interval=10 --rand-init=on --max-requests=0 \
+--oltp-read-only=off --max-time=120 --num-threads=30 \
+prepare
+Creating table 'sbtest1'...
+Inserting 100000 records into 'sbtest1'
+Creating secondary indexes on 'sbtest1'...
+Creating table 'sbtest2'...
+Inserting 100000 records into 'sbtest2'
+Creating secondary indexes on 'sbtest2'...
+......
+Inserting 100000 records into 'sbtest9'
+Creating secondary indexes on 'sbtest9'...
+Creating table 'sbtest10'...
+Inserting 100000 records into 'sbtest10'
+Creating secondary indexes on 'sbtest10'...
+
+5. 执行sysbench测试，并输出测试报告
+
+#/home/mysql/sysbench-1.0/src/sysbench --test=/home/mysql/sysbench-1.0/tests/include/oltp_legacy/oltp.lua \
+--mysql-host=mysql-host-ip --mysql-port=3306 --mysql-user=envision --mysql-password=password \
+--mysql-db=dbtest --oltp-tables-count=10 --oltp-table-size=500000 \
+--report-interval=10 --rand-init=on --max-requests=0 \
+--oltp-read-only=off --max-time=120 --num-threads=128 \
+run > /tmp/liang/mysql-report.txt
+
+6. 查看测试报告
+
+30个threads
+
+sysbench 1.0.12 (using bundled LuaJIT 2.1.0-beta2)
+Running the test with following options:
+Number of threads: 30
+Report intermediate results every 10 second(s)
+Initializing random number generator from current time
+Initializing worker threads...
+Threads started!
+[ 10s ] thds: 30 tps: 188.63 qps: 3795.16 (r/w/o: 2659.89/755.31/379.96) lat (ms,95%): 223.34 err/s: 0.00 reconn/s: 0.00
+[ 20s ] thds: 30 tps: 177.80 qps: 3563.97 (r/w/o: 2496.95/711.31/355.71) lat (ms,95%): 248.83 err/s: 0.00 reconn/s: 0.00
+[ 30s ] thds: 30 tps: 177.20 qps: 3542.62 (r/w/o: 2479.82/708.30/354.50) lat (ms,95%): 235.74 err/s: 0.00 reconn/s: 0.00
+[ 40s ] thds: 30 tps: 189.60 qps: 3797.38 (r/w/o: 2658.99/759.20/379.20) lat (ms,95%): 227.40 err/s: 0.00 reconn/s: 0.00
+[ 50s ] thds: 30 tps: 190.40 qps: 3798.09 (r/w/o: 2655.29/762.20/380.60) lat (ms,95%): 211.60 err/s: 0.00 reconn/s: 0.00
+[ 60s ] thds: 30 tps: 179.70 qps: 3598.40 (r/w/o: 2520.50/718.40/359.50) lat (ms,95%): 235.74 err/s: 0.00 reconn/s: 0.00
+[ 70s ] thds: 30 tps: 187.30 qps: 3740.91 (r/w/o: 2617.61/748.50/374.80) lat (ms,95%): 227.40 err/s: 0.00 reconn/s: 0.00
+[ 80s ] thds: 30 tps: 187.40 qps: 3755.29 (r/w/o: 2630.19/750.40/374.70) lat (ms,95%): 211.60 err/s: 0.00 reconn/s: 0.00
+[ 90s ] thds: 30 tps: 188.10 qps: 3762.11 (r/w/o: 2632.80/753.10/376.20) lat (ms,95%): 211.60 err/s: 0.00 reconn/s: 0.00
+[ 100s ] thds: 30 tps: 183.70 qps: 3676.35 (r/w/o: 2575.16/733.69/367.49) lat (ms,95%): 227.40 err/s: 0.00 reconn/s: 0.00
+[ 110s ] thds: 30 tps: 190.80 qps: 3816.33 (r/w/o: 2671.42/763.41/381.50) lat (ms,95%): 211.60 err/s: 0.00 reconn/s: 0.00
+[ 120s ] thds: 30 tps: 195.49 qps: 3907.36 (r/w/o: 2733.40/783.17/390.79) lat (ms,95%): 204.11 err/s: 0.00 reconn/s: 0.00
+SQL statistics:
+    queries performed:
+        read:                            313488 --读总数
+        write:                          89568  --写总数
+        other:                          44784 --其他操作(CURD之外的操作，例如COMMIT)
+        total:                          447840 --全部总数
+    transactions:                        22392  (186.27 per sec.) --总事务数(每秒事务数)
+    queries:                            447840 (3725.43 per sec.) --总数(每秒总数)
+    ignored errors:                      0      (0.00 per sec.)  --总忽略错误总数(每秒忽略错误次数)
+    reconnects:                          0      (0.00 per sec.) --重连总数(每秒重连次数)
+General statistics:
+    total time:                          120.2098s --总耗时
+    total number of events:              22392 --共发生多少事务数
+Latency (ms):
+        min:                                  105.91 --最小耗时
+        avg:                                  160.86 --平均耗时
+        max:                                  850.77 --最长耗时
+        95th percentile:                      223.34 --超过95%平均耗时
+        sum:                              3601892.56
+Threads fairness:
+    events (avg/stddev):          746.4000/4.95 --总处理事件数/标准偏差
+    execution time (avg/stddev):  120.0631/0.05--总执行时间/标准偏差
+
+经过测试，AWS和Azure的mysql性能相差无几。sysbench的工具，使用起来也比较简单直观。适合对Mysql的简单性能测试。后续有时间，再研究一下sysbench对CPU，IO等性能测试的情况和使用感受。

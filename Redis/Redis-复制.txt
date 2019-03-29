@@ -1,0 +1,171 @@
+Redis-复制
+
+一、配置
+	1、建立复制
+		1）在配置文件中slaveof {masterhost} {masterport}
+		2）在redis启动时加入--slaveof {masterhost} {masterport}
+		3）支持使用命令slaveof {masterhost} {masterport}
+
+		
+问题一：需要配置Redis如下：		
+protected-mode no
+
+	2、断开复制
+		slaveof no one
+		
+		流程如下：
+		断开与主节点复制的关系
+		从节点晋升给主节点
+		
+		切换主节点：
+		slaveof {newmasterhost} {newmasterport}
+		
+		流程如下：
+		断开与主节点复制的关系
+		与新的主节点建立复制关系
+		删了从节点当前所有数据
+		对新的主节点进行复制操作
+	
+	3、复制安全性
+		主节点可以通过requirepass参数进行密码验证，从节点需要masterauth参数与主节点上的密码一致；
+		
+	4、只读
+		默认从节点使用slave-read-only=yes配置设置为只读。
+		
+	5、传输延迟
+		Redis提供repl-disable-tcp-nodelay参数用于控制是否关闭TCP_NODELAY，默认是关闭
+		1、当闭关时，主节点产生的命令无论大小都会及时的发送给从节点；
+		2、当开启时，主节点会合并较小的TCP数据包，从而节省带宽。
+		
+		如是容灾性，同城跨机房可以开启repl-disable-tcp-nodelay。
+		
+三、复制原理
+	1、复制过程
+		从节点执行slaveof命令后，开始复制过程
+		1）	保存主节点信息
+			127.0.0.1:6379> info replication
+			# Replication
+			role:slave
+			master_host:192.168.237.22
+			master_port:6380
+		2）从节点内部通过每秒运行定时任务维护复制相关逻辑，建立连接；
+			通过以下状态可以确认与主断开多长时间
+			127.0.0.1:6379> info replication
+			master_link_down_since_seconds:34
+		3）发送Ping命令
+			连接成功后会发送Ping命令，每秒一次
+			
+		4）验证权限
+		5）同步数据集
+		6）命令持续复制
+		
+	2、数据同步
+		Redis在2.8以上版本使用psync命令完成主从数据同步，同步过程分为全量和部分
+		全量复制：一般用于初次复制；
+		部分复制：用于在处理主从复制过程中由于网络或其他原因导致数据丢失；
+		psync命令需要以下支持：
+		主从节点各自的复制的偏移量
+		主节点的复制积压缓冲区
+		主节点运行ID
+		
+		1）复制偏移量：
+			主节点上的偏移量：
+			127.0.0.1:6380> info replication
+			# Replication
+			role:master
+			connected_slaves:1
+			slave0:ip=192.168.237.22,port=6379,state=online,offset=351,lag=1
+			master_repl_offset:351
+			
+			从节点上的偏移量：
+			127.0.0.1:6379> info replication
+			# Replication
+			role:slave
+			master_host:192.168.237.22
+			master_port:6380
+			master_link_status:up
+			master_last_io_seconds_ago:8
+			master_sync_in_progress:0
+			slave_repl_offset:519
+			
+			如主从节点的偏移量太大，说明可能是网络延迟或命令阻塞；
+		
+		2）复制积压缓冲区
+			默认大小为1MB，配置参数repl-backlog-size修改
+			127.0.0.1:6380> info replication
+            # Replication
+            role:master
+            connected_slaves:1
+            slave0:ip=192.168.237.22,port=6379,state=online,offset=155,lag=1
+            master_repl_offset:155
+            repl_backlog_active:1               #开启复制缓冲区
+            repl_backlog_size:1048576           #缓冲区最大长度
+            repl_backlog_first_byte_offset:2    #起始偏移量，计算当前缓冲区可用范围
+            repl_backlog_histlen:154            #已经保存数据有效长度
+		3）主节点运行ID
+			每个Redis节点启动后都会分配一个40位的十六进制的字符作为ID,使用info server可以查看当前节点的运行ID,重启节点后ID会变化。
+			info server
+			如需要重新加载，但是保持ID不变可以使用degug reload命令
+			
+		4）psync命令
+			从节点会使用psync命令完成复制功能
+			psync {runid} {offset}
+			
+			runid:主节点的运行ID
+			offset：当前从节点已复制的数据偏移量
+	
+	3、全量复制
+		1）流程说明：
+		1-从节点发送psync命令，由于第一次没有复制偏移量，所以发送psync -1
+		2-主节点根据psync -1解析出当前为全量复制，会响应+FULLRESYNC
+		3-从节点接收主节点的响应数据保存运行ID和偏移量，完成后打印如下日志
+		    1230:S 25 Dec 15:03:55.535 * Partial resynchronization not possible (no cached master)
+			1230:S 25 Dec 15:03:55.538 * Full resync from master: 9b69c313ef04dc748a9327f84827585cc44f0b72:2843
+		4-主节点执行bgsave命令保存RDB文件到本地
+			1234:M 25 Dec 15:03:55.535 * Slave 192.168.237.22:6379 asks for synchronization
+			1234:M 25 Dec 15:03:55.535 * Full resync requested by slave 192.168.237.22:6379
+			1234:M 25 Dec 15:03:55.535 * Starting BGSAVE for SYNC with target: disk
+			1234:M 25 Dec 15:03:55.537 * Background saving started by pid 1370
+			1370:C 25 Dec 15:03:55.544 * DB saved on disk
+			1370:C 25 Dec 15:03:55.546 * RDB: 6 MB of memory used by copy-on-write
+			1234:M 25 Dec 15:03:55.634 * Background saving terminated with success
+		5-主节点会发送RDB文件给从节点，从节点把数据接收存在本地并直接作为从节点数据，接收完成后从节点打印如下日志：
+			1230:S 25 Dec 15:03:55.634 * MASTER <-> SLAVE sync: receiving 95 bytes from master
+			
+这里需要注意：如果RDB文件过大（超过6GB）要格外小心，传输文件需要一时间，可分析Full sync和MASTER <-> SLAVE这两行的时间差，
+如果总时间超过repl-timeout所配置的时间（默认为60秒），从节点将放弃接受RDB文件，并清理已经下载的临时文件。导致全量复制失败；
+在数据量较大的时间需要调整repl-timeout这个值。
+		
+		6-从节点开始接收RDB快照到接收完成期间，主节点仍然在响应命令，因此主节点需要将这期间的写命令缓存在复制客户缓冲区，当从节点完成RDB的加载后在把缓冲区的数据传送给从节点
+
+对于高流量的环境，容易造成主节点复制客户端缓冲区溢出。造成全量同步失败；并打印如下日志“scheduled to be closed ASAP for overcoming of uptput buffer limits”
+		
+		7-从节点完成主节点的数据接收后，会清空自己的旧数据，并开始加载RDB文件；
+			对于做读写分离场景，从节点也负责响应读取命令，如不同步可能拿到无法的数据，可能通过设置slave-server-stale-data参数（默认开启），会响应所有命令，如需要保持数据一至性需要设置为no来关闭，这时从节点只响应info 和 slaveof
+	
+
+	4、部分复制
+	
+	5、心跳线
+		主节点每10秒对从节点发送Ping命令，判断从节点是否在线，可通过 repl-ping-slave-period控制发送的频率
+		从节点在主线程中每隔一秒发送repconf ack {offset}，给主节点上报自身的复制偏移量
+		实现保证从节点的数据和延迟性功能，可以通过min-slaves-to-write、min-slaves-max-lag参数配置定义；
+		
+		主节点根据repconf命令来判断从节点超时时间
+		127.0.0.1:6380> info replication
+		# Replication
+		role:master
+		connected_slaves:1
+		slave0:ip=192.168.237.22,port=6379,state=online,offset=6553,lag=1   #lag表示与从节点最后一次通信延迟的秒数。
+		master_repl_offset:6553
+		repl_backlog_active:1
+		repl_backlog_size:1048576
+		repl_backlog_first_byte_offset:2
+		repl_backlog_histlen:6552
+		
+		offset=6553和master_repl_offset:6553的差就是复制延迟的量。
+		
+六、问题
+	
+		
+		

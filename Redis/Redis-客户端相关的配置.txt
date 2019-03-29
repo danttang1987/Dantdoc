@@ -1,0 +1,11 @@
+Redis-客户端相关的配置
+
+timeout:检测客户端空闲连接超时时间，一旦idle时间达到了这个时间将关闭客户端；
+
+maxclients:客户端的最大连接数
+
+tcp-keepalive：检查TCP连接活动性的周期，默认为0，不进行检查，建议设置为60，每60秒会对创建的连接进行活动性检查，防止大量死连接占用系统资源
+
+tcp-backlog:TCP三次握手后会将接受的连接放入队列中，这个就是队列的大小，默认是511，不需要设置，但操作系统中的/proc/sys/net/core/somaxconn小于tcp-backlog时将不生效，并启动过会出现警告
+     cat /proc/sys/net/core/somaxconn
+     echo 511 > /proc/sys/net/core/somaxconn

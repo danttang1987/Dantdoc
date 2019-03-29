@@ -1,0 +1,132 @@
+Reis-客户端API
+1、client list
+输出客户端的信息，每一行一个；
+
+[root@redis01 ~]# redis-cli client list
+id=2 addr=127.0.0.1:57512 fd=6 name= age=0 idle=0 flags=N db=0 sub=0 psub=0 multi=-1 qbuf=0 qbuf-free=32768 obl=0 oll=0 omem=0 events=r cmd=client
+
+            1）标识
+            id=2   客户端连接的唯一标识
+            addr=127.0.0.1:57512   客户端的IP和端口
+            fd=6     Sock的文件描述符，与lsof命令中的fd是同一个
+            name=     客户端的名字
+            
+            2）输入缓冲区
+            Redis为每个客户分配了输入缓冲区，它的作用是将客户端发送的命令临时保存，同时Redis会从输入缓冲区拉取命令并执行
+            qbuf=0   缓冲区的总容量
+            qbuf-free=32768   缓冲区的剩余容量
+            
+            redis没有提供设置输入缓冲区的大小，它会根据实际情况自动调整，最大不超过1GB；
+            注意：
+            一旦某个客户端的输入缓冲区超过1GB，将闭关这个客户端；
+            输入缓冲区不受maxmemory控制，假设一个Redis实例设置maxmemory为4G，数据存储了2GB，但是如果此时输入缓冲区使用了3GB，总共已经超出maxmemory的限制，可能会出现数据丢失；
+            
+            [root@redis01 ~]# redis-cli info memory
+            # Memory
+            used_memory_human:5G
+            maxmemory_human:4G
+            
+            输入缓冲区过大的原因：
+            Redis的处理速度跟不上输入缓冲区的输入速度，并且每次进入输入缓冲区的命令包含了大量的bigkey; 
+            Redis发生了阻塞，短期内不能处理命令；
+            
+            如何监控：
+            a)通过定期执行client list命令，收集qbuf和qbuf-fee找到异常连接并记录分析
+            b)通过info命令的info clients，找到最大输入缓冲区，如：client_biggest_input_buf,如果超过10MB就报警；
+            
+            [root@redis01 ~]# redis-cli info clients
+            # Clients
+            connected_clients:1
+            client_longest_output_list:0
+            client_biggest_input_buf:0
+            blocked_clients:0
+            
+            
+            3）输出缓冲区
+            obl=0   固定缓冲区
+            oll=0   动态缓冲区
+            omem=0   使用的字节数
+            
+            Redis为每个客户端分配了输入缓冲区，用于保存命令执行的结果，可能client-output-buffer-limit来进行设置
+            并且为分三种：普通客户端、发布订阅、slave
+            
+            配置规则：
+            client-output-buffer-limit <class> <hard limit> <soft limit> <soft seconds>
+            
+            class:客户端类型（normal:普通、slave:slave、pubsub:发布订阅）
+            <hard limit>：如果客户端的输入缓冲区大于这个值，客户端将被关闭
+            <soft limit>，<soft seconds>：如果客户端的输入缓冲区大于这个值，并持续了<soft seconds>秒后客户端将被关闭，
+            
+            redis-cli config get "*" | awk '{if (NR%2 == 1) {printf $0}else{print "\t"$0}}'
+            client-output-buffer-limit      normal 0 0 0 slave 268435456 67108864 60 pubsub 33554432 8388608 60
+            
+            如何监控：
+            a)通过定期执行client list命令，收集obl、oll和omem找到异常连接并记录分析
+            b)通过info命令的info clients，找到最大输入缓冲区，如：client_longest_output_list；
+            
+            [root@redis01 ~]# redis-cli info clients
+            # Clients
+            connected_clients:1
+            client_longest_output_list:0
+            client_biggest_input_buf:0
+            blocked_clients:0
+            
+            配置建议：
+            限制普通客户端的输出缓冲区：
+            client-output-buffer-limit normal 20mb 10mb 120
+            增大slave的输出缓冲区：
+            client-output-buffer-limit slave 512mb 128mb 60
+            限制容易认输入缓冲区增大的命令：如：monitor
+            即时监控内存，如出现内存抖动频繁，可能是输出缓冲区过大；
+            
+            4）客户端的存活状态
+            age=0    客户端已经连接的时间
+            idle=0   客户端已经连接最近一次空闲时间
+            如age等于idle表示一直空闲
+            
+            5）客户端的限制和超时
+            maxclients  限制redis最大的客户端连接数（默认为10000）
+            timeout   关闭超时的连接（默认不关闭）
+            
+            可通过 config get * 查看设置
+            redis-cli config get "*" | awk '{if (NR%2 == 1) {printf $0}else{print "\t"$0}}'| egrep "timeout|maxclients"
+            
+            可通过info clients查看当前的连接数
+            [root@redis01 ~]# redis-cli info clients
+            # Clients
+            connected_clients:2
+            
+            
+            6）客户端的类型
+            flags=N 
+            N:表示普通客户端
+            S：表示为slave客户端
+            O:表示当前客户端正在执行monitor命令
+            b:当前客户端正在等待阻塞
+
+
+2、client setName和client getName
+用于设置客户端的名字
+
+
+3、client kill
+杀掉客户端连接
+
+client kill ip:port
+
+4、client pause
+阻塞所有客户端，不包含主从复制客户端
+
+client pause timeout(毫秒)
+
+5、monitor
+监控正在执行的命令
+
+
+
+
+
+
+
+
+

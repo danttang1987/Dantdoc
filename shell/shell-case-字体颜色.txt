@@ -1,0 +1,44 @@
+shell-case
+
+
+case "变量" in
+	值1)
+		指令1..
+		;;
+	值2)
+		cmd
+		;;
+	value3)
+		cmd
+		;;
+	value4)
+		cmd
+		;;
+	*)
+		cmd
+esac
+
+
+字体颜色：
+
+[root@d03 ~]# echo -e "\E[1;31mredzishan\E[0m"
+redzishan
+[root@d03 ~]# echo -e "\033[1;31mredzishan\033[0m"
+redzishan
+
+\E可使用\033替代
+[1:表示加粗显示
+31m:表示为红色字例，可以换成不同的数字
+[0m：表示关闭所有属性
+
+\33[1m：表示设置高亮度
+\33[4m：表示设置下划线
+\33[5m：表示闪烁
+\33[7m：表示反显
+\33[8m：表示消隐
+\33[30m--\33[37m：表示前景色
+\33[40m--\33[47m：表示背景色
+
+更多可以参考man console_cods
+
+

@@ -1,0 +1,16 @@
+NFS优化总结
+1、磁盘使用多个做RAID 5或10，网卡吞吐要大，至少千兆（可多块网卡做绑定）
+2、NFS服务端的配置优化：/data 10.0.0.0/24(sync,rw,all_squash,anonuid=65534,anongid=65534)
+3、客户端挂载优化mount -t nfs -o hard,bg,noatime,nodiratime,nosuid,noexec,nodev,intr,sync 192.168.237.14:/wwwfile /video
+noatime,nodiratime,rsize=131072,wsize=131072提高性能
+nosuid,noexec,nodev增加安全性
+4、内核优化
+cat >>/etc/sysctl.conf <<EOF
+net.core.wmem_default = 8388608
+net.core.rmem_default = 8388608
+net.core.rmem_max = 16777216
+net.core.wmem_max = 16777216
+EOF
+sysctl -p
+5、可用分布式文件系统，Moosefs(mfs)，GlusterFS（适用于大文件），FastDFS（适用于小文件）
+

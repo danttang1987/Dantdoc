@@ -1,0 +1,15 @@
+
+按单词排序
+awk -F "[,. \n]+" '{for(i=1;i<=NF;i++)array[$i]++}END{for(key in array)print array[key],key|"sort -nr"}' zishan.txt | column -t
+
+tr "[ ,.]" "\n" <zishan.txt|grep -v "^$"|sort|uniq -c|sort -rn
+
+tr "[ ,.]" "\n" <zishan.txt|sed '/^$/d'|awk '{++s[$0]}END{for(key in s)print s[key],key|"sort -nr"}'
+
+
+按字母排序
+tr "[ ,.]" "\n" <zishan.txt|awk -F "" '{for(i=1;i<=NF;i++)s[$i]++}END{for(key in s)print s[key],key|"sort -rn"}'
+
+grep -o "[^ ]" zishan.txt | sort |uniq -c|sort -nr -k 1
+
+

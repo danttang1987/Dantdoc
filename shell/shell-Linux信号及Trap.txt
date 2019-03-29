@@ -1,0 +1,51 @@
+shell-Linux信号及trap命令
+
+
+[tht@d03 ~]$ trap -l
+ 1) SIGHUP       2) SIGINT       3) SIGQUIT      4) SIGILL       5) SIGTRAP
+ 6) SIGABRT      7) SIGBUS       8) SIGFPE       9) SIGKILL     10) SIGUSR1
+11) SIGSEGV     12) SIGUSR2     13) SIGPIPE     14) SIGALRM     15) SIGTERM
+16) SIGSTKFLT   17) SIGCHLD     18) SIGCONT     19) SIGSTOP     20) SIGTSTP
+21) SIGTTIN     22) SIGTTOU     23) SIGURG      24) SIGXCPU     25) SIGXFSZ
+26) SIGVTALRM   27) SIGPROF     28) SIGWINCH    29) SIGIO       30) SIGPWR
+31) SIGSYS      34) SIGRTMIN    35) SIGRTMIN+1  36) SIGRTMIN+2  37) SIGRTMIN+3
+38) SIGRTMIN+4  39) SIGRTMIN+5  40) SIGRTMIN+6  41) SIGRTMIN+7  42) SIGRTMIN+8
+43) SIGRTMIN+9  44) SIGRTMIN+10 45) SIGRTMIN+11 46) SIGRTMIN+12 47) SIGRTMIN+13
+48) SIGRTMIN+14 49) SIGRTMIN+15 50) SIGRTMAX-14 51) SIGRTMAX-13 52) SIGRTMAX-12
+53) SIGRTMAX-11 54) SIGRTMAX-10 55) SIGRTMAX-9  56) SIGRTMAX-8  57) SIGRTMAX-7
+58) SIGRTMAX-6  59) SIGRTMAX-5  60) SIGRTMAX-4  61) SIGRTMAX-3  62) SIGRTMAX-2
+63) SIGRTMAX-1  64) SIGRTMAX
+
+常见重要的：
+HUP(1)     ## 挂起，通常因终端掉线或用户退出在而引发
+INT(2)     ##中断，通常因按下Ctrl+c组合键而引发
+QUIT(3)    ##退出，通常因按下Ctrl+\组合键而引发
+ABRT(6)    ##中止，通常因某些严重的执行错误而引发
+ALRM(14)   ##报警，通常用来处理超时
+TERM(15)   ##终止，通常在系统关机时发送
+TSTP(20)   ##停止进程的运行，但该信号可以被处理和忽略，通常因按下Ctrl+z组合键而引发
+
+trap命令用于指定在接收信号后将要采取的行动
+
+使用方法：
+trap "命令;命令" 信号名或编号
+
+trap "echo zishan" 2
+
+trap "" 1 2 3 20 15   ##执行这些数字的信号什么都不做
+trap ":" 1 2 3 20 15   ##执行这些数字的信号恢复对应功能
+
+
+
+生产应用：
+
+trap "find /tmp -type f -name "oldboy_*"|xargs rm -rf && exit" INT
+
+
+
+
+
+
+
+
+

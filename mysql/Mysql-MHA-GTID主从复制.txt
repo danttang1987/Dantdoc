@@ -1,0 +1,75 @@
+MHA
+
+MHA 管理节点
+MHA node
+
+原理：
+将最新的Slave提升为新的Master,将其他的Slave重新指向新的Master。
+
+
+
+
+准备工作：
+1、安装三个Mysql数据库服务器
+2、配置server_id和log_bin
+3、创建复制用户
+mysql -uroot -p123.com -e "grant replication slave on *.* to 'rep'@'192.168.237.3%' identified by '123.comm'"
+
+4、开启gtid
+mysql -uroot -p123.com -e "show variables;"| grep -i gtid
+enforce_gtid_consistency        OFF
+gtid_executed
+gtid_mode       OFF
+
+sed -i '/\[mysqld\]/agtid_mode = ON\nenforce_gtid_consistency = ON\nlog-slave-updates' /etc/my.cnf
+sed -i '/\[mysqld\]/askip-name-resolve' /etc/my.cnf
+
+5、开启slave
+确认是否有slav信息
+mysql> show slave status;
+Empty set (0.00 sec)
+如果有，需要执行
+reset slave all;
+
+change master to master_host='192.168.237.31',master_user='rep',master_password='123.comm',master_auto_position=1;
+
+注：使用GTID进行主从复制不需要指定Binlog位置，只需要设置为如下：master_auto_position=1
+
+start slave;
+show slave status;
+
+6、禁用中继日志清理
+mysql -uroot -p123.com -e "set global relay_log_purge = 0;"
+sed -i '/\[mysqld\]/arelay_log_purge = 0' /etc/my.cnf
+
+禁用中继日志自动清理后需要编写脚本定期清理中继日志
+##############################################
+#!/bin/bash
+user=root
+passwd=123456
+port=3306
+log_dir='/data/masterha/log'
+work_dir='/data'
+purge='/usr/local/bin/purge_relay_logs'
+
+if [ ! -d $log_dir ]
+then
+   mkdir $log_dir -p
+fi
+
+$purge --user=$user --password=$passwd --disable_relay_log_purge --port=$port --workdir=$work_dir >> $log_dir/purge_relay_logs.log 2>&1
+
+######################################################
+
+7、设置从库为只读
+mysql -uroot -p123.com -e "set global read_only = 1;"
+sed -i '/\[mysqld\]/aread_only = 1' /etc/my.cnf
+
+
+
+
+
+
+
+
+

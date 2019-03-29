@@ -1,0 +1,117 @@
+shell 的测试条件
+
+
+语法：
+test <测试表达式>
+[ <测试表达式> ]     需要有空格
+[[ <测试表达式> ]]   需要有空格，是扩展的test和[]。
+((<测试表达式>))
+
+
+注：
+	[[]]可以使用通配符等进行模式匹配；
+	[[]]可使用&&、||、>、<等操作符，在[]中只能用-o\-a\-gt\-lt（只能用于整数）
+	对于整数的关系运算可以使用(())
+	
+1、test
+	test -f file1 && echo "this is file" || echo "this is no file"
+	test -z $a && echo "z is null" || echo "this is not null"
+	
+2、[]
+	[ -f file1 ] && echo "this is file" || echo "this is no file"
+	[ -z $a ] && echo "z is null" || echo "this is not null"
+	
+
+3、[[]]
+	[[ -f file1 ]] && echo "this is file" || echo "this is no file"
+	[[ -f file1 && -z $a ]] && echo "this is file" || echo "this is no file"
+
+4、文件测试表达式
+
+-d       ##文件存在，并为目录（directory）
+-f       ##文件存在，并为普通文件
+-e       ##文件存在(exist)
+-r       ##文件存在，并可读
+-s       ##文件存在，并文件大小不为0
+-w       ##文件存在，并可写
+-x       ##文件存在，并可执行
+-L       ##文件存在，并为链接文件
+f1 -nt f2##文件f1比文件f2新则为真
+f1 -ot f2##文件f1比文件f2旧则为真
+
+注：使用[]测试变量时，如果被测试的变量不加引号，测试的值可能不准确
+	[root@d03 ~]# echo $b
+	
+	[root@d03 ~]# [ -f $b ] && echo "b is file" || echo "b is not file"
+	b is file
+	[root@d03 ~]# [ -f "$b" ] && echo "b is file" || echo "b is not file"
+	b is not file
+	[root@d03 ~]# 
+
+5、特殊条件测试表达式	
+[ 条件 ] &&{
+	命令1
+	命令2
+	命令n
+}
+
+[[ 条件 ]] &&{
+	命令1
+	命令2
+	命令n
+}
+
+test 条件 &&{
+	命令1
+	命令2
+	命令n
+}
+
+
+6、字符串测试表达式
+
+-n "串1"  表示不为空，no zero
+-z "串1"  表示为空，zero
+"串1" = "串2" 或"串1" == "串2"        等号两端需要有空格
+"串1" != "串2"  或  "串1" !== "串2"    等号两端需要有空格
+
+注：
+	等号两端需要有空格
+	字符串需要用引号
+	
+	[root@d03 ~]# [ -n $c ] && echo "b is no zero" || echo "b is zero" 
+	b is no zero
+	[root@d03 ~]# [ -n "$c" ] && echo "b is no zero" || echo "b is zero"
+	b is zero
+	[root@d03 ~]# c="zishan"
+	[root@d03 ~]# [ "$c" == "zishan" ] && echo "c=zishan" || echo "c!=zishan"
+	c=zishan
+	[root@d03 ~]# [ "$c"=="zishan" ] && echo "c=zishan" || echo "c!=zishan"  
+	c=zishan
+	[root@d03 ~]# [ "$c"=="zishan1" ] && echo "c=zishan" || echo "c!=zishan"
+	c=zishan	
+
+
+7、整数二元比较操作
+
+在[]或test中使用   在[[]]或(())中使用
+
+     -eq                ==或=
+     -ne                !=
+     -gt                >
+     -ge                >=
+     -lt                <
+     -le                <=
+
+注：
+	建议使用[]，其次是(())，不建议使用[[]]
+	只能用于整数运算
+	
+8、逻辑操作符
+在[]或test中使用   在[[]]或(())中使用
+
+     -a                &&
+     -o                ||
+     !                 !
+
+

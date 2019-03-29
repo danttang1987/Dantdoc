@@ -1,0 +1,125 @@
+shell变量子串
+	${parametr}                  ##返回变量$parametr    
+	${#parametr}                 ##返回变量$parametr的长度，按字符
+	${parametr:offset}           ##在变$parametr量中，从offset开始到结尾的字符
+	${parametr:offset:length}    ##在变$parametr量中，从offset开始取length长度的字符
+	${parametr#word}             ##从头开始删除最短匹配word的字符
+	${parametr##word}            ##从头开始删除最长匹配word的字符
+	${parametr%word}             ##从尾开始删除最短匹配word的字符
+	${parametr%%word}            ##从尾开始删除最长匹配word的字符
+	${parametr/pattern/string}   ##使用string替换第一个匹配pattern
+	${parametr//pattern/string}  ##使用string替换所有匹配pattern
+	
+	示例1：
+	[root@d03 shell]# OLDBOY="My name is oldboy"
+	[root@d03 shell]# echo ${#OLDBOY}
+	17
+	[root@d03 shell]# echo ${OLDBOY:2}
+	name is oldboy
+	[root@d03 shell]# echo ${OLDBOY:3:4}
+	name
+	[root@d03 shell]# echo $OLDBOY | cut -c 4-8
+	name 
+	[root@d03 shell]# echo $OLDBOY | cut -f 2 -d " "
+	name
+	
+	示例2：从头删除字符
+	[root@d03 shell]# OLDBOY=abcABC123ABCabc
+	[root@d03 shell]# echo $OLDBOY
+	abcABC123ABCabc
+	[root@d03 shell]# echo ${OLDBOY#a*c}
+	ABC123ABCabc
+	[root@d03 shell]# echo ${OLDBOY#a*C}
+	123ABCabc
+	[root@d03 shell]# echo ${OLDBOY#b*c}     ##从头开始无法匹配到
+	abcABC123ABCabc
+	[root@d03 shell]# echo ${OLDBOY##a*c}
+	
+	[root@d03 shell]# echo ${OLDBOY##a*C}
+	abc
+	[root@d03 shell]# 
+	
+	示例3：从尾删除字符
+	[root@d03 shell]# OLDBOY=abcABC123ABCabc
+	[root@d03 shell]# echo $OLDBOY
+	abcABC123ABCabc
+	[root@d03 shell]# echo ${OLDBOY%a*c}
+	abcABC123ABC
+	[root@d03 shell]# echo ${OLDBOY%%a*c}
+	
+	[root@d03 shell]# echo ${OLDBOY%a*C}      ##从尾开始无法匹配到
+	abcABC123ABCabc
+	[root@d03 shell]# echo ${OLDBOY%%a*C
+		
+	示例4：替换字符串
+	[root@d03 shell]# OLDBOY="I am oldboy,yes,oldboy"
+	[root@d03 shell]# echo $OLDBOY
+	I am oldboy,yes,oldboy
+	[root@d03 shell]# echo ${OLDBOY/oldboy/oldgirl}
+	I am oldgirl,yes,oldboy
+	[root@d03 shell]# echo ${OLDBOY//oldboy/oldgirl}
+	I am oldgirl,yes,oldgirl
+	
+	
+	生产应用案例：
+	批量修改文件名：去所有文件名中_finished
+	生成测试文件
+	[root@d03 test]# for i in `seq 10`;do touch ${i}_finished.jpg;done
+	[root@d03 test]# ls
+	10_finished.jpg  2_finished.jpg  4_finished.jpg  6_finished.jpg  8_finished.jpg
+	1_finished.jpg   3_finished.jpg  5_finished.jpg  7_finished.jpg  9_finished.jpg
+	
+	[root@d03 test]# for filename in `ls *_fin*.jpg`;do mv $filename ${filename/_finished/};done
+	[root@d03 test]# ls
+	10.jpg  1.jpg  2.jpg  3.jpg  4.jpg  5.jpg  6.jpg  7.jpg  8.jpg  9.jpg
+	[root@d03 test]# 
+
+2、特殊变量扩展
+	${parametr:-word}   如果变量值为空或未赋值，则会返回word字符，并代替变量的值
+	${parametr:=word}   如果变量值为空或未赋值，则设置这个变量的值为Word，并返回其值。
+	${parametr:?word}   如果变量值为空或未赋值，那么Word字符串将被作为标准错误输出。
+	${parametr:+word}   如果变量值为空或未赋值，则什么都不做，否则将Word字符串替代变量的值。
+	
+	示例一：${parametr:-word}
+	[root@d03 ~]# echo $test
+
+	[root@d03 ~]# result=${test:-unset}
+	[root@d03 ~]# echo $result
+	unset
+	[root@d03 ~]# echo $test
+	
+	[root@d03 ~]# 
+	
+	示例二：${parametr:=word}
+	[root@d03 ~]# result=${test:=unset1}
+	[root@d03 ~]# echo $result
+	unset1
+	[root@d03 ~]# echo $test
+	unset1
+	[root@d03 ~]# 
+	
+	示例三：${parametr:?word}
+	[root@d03 ~]# echo ${test:?not defined}
+	-bash: test: not defined
+	[root@d03 ~]# test=1
+	[root@d03 ~]# echo ${test:?not defined}
+	1
+	[root@d03 ~]# 
+	
+	示例四：${parametr:+word}
+	[root@d03 shell]# result=${test:+unset}
+	[root@d03 shell]# echo $result
+	
+	[root@d03 shell]# echo $test
+	
+	[root@d03 shell]# test=zishan
+	[root@d03 shell]# result=${test:+unset}
+	[root@d03 shell]# echo $result
+	unset
+	[root@d03 shell]# echo $test
+	zishan
+	[root@d03 shell]# 
+	
+	
+
+	

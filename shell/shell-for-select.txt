@@ -1,0 +1,60 @@
+shell-for-select
+
+语法：
+for 变量 in 变量取值列表
+do
+	cmd
+done
+
+注：变量取值列表可以省略，默认为"$@"
+
+
+
+语法二：基于C语言
+for ((exp1;exp2;exp3))
+do
+	cmd
+done
+
+如：
+for((i=1;i<100;i++))
+do
+	echo $i
+done
+
+
+select
+select用于创建菜单列表
+语法：
+select 变量名 in 菜单列表
+do
+	cmd
+
+done
+
+
+示例：
+#!/bin/bash
+select name in zishan flame blackyo host
+do
+        echo $name
+done
+
+
+也可以用户数组
+#!/bin/bash
+array=(zishan flame blackyo host)
+select name in "${array[@]}"
+do
+        echo $name
+done
+
+
+PS3与REPLY变量
+
+#!/bin/bash
+PS3="Please select path:"
+select name in `ls \home`
+do
+        echo "You select number:$REPLY)"$name
+done

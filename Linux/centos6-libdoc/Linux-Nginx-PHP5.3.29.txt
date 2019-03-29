@@ -1,0 +1,130 @@
+#Nginx+php是通过fastCGI(通过网关接口)
+#PHP通过FastCGI守护进行php-fpm。
+#Nginx通过fastcgi_pass与php-fpm通信；
+
+
+#php安装
+#1、检查安装PHP需要的Lib库
+rpm -qa zlib-devel libxml2-devel libjpeg-devel libjpeg-turbo-devel libiconv-devel freetype-devel libpng-devel libxslt-devel gd-devel libcurl-devel
+
+#注libjpeg-turbo-devel是早期的libjpeg-devel的新名字，libcurl-devel是早期的curl-devel的新名字
+
+yum install zlib-devel libxml2-devel libjpeg-devel libjpeg-turbo-devel libiconv-devel freetype-devel libpng-devel libxslt-devel gd-devel libcurl-devel -y
+
+#libiconv无法通过yum安装需要进行编译安装
+mkdir -p /home/tang/tools
+cd /home/tang/tools
+wget https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.15.tar.gz
+tar zxf libiconv-1.15.tar.gz
+cd libiconv-1.15
+./configure --prefix=/usr/local/libiconv
+make
+make install
+
+
+#安装libmcrypt库，对于程序运行时添加/移除算法是有用的，但目前不被官方yun支持需要配置epel源
+
+wget -O /etc/yum.repos.d/epel.repo http://mirrors.aliyun.com/repo/epel-6.repo
+yum -y install libmcrypt-devel
+
+#安装mhash加密扩展库
+yum install -y mhash
+
+#安装mcrypt加密库
+yum install -y mcrypt
+
+#安装php fastCGI方式
+mkdir -p /home/tang/tools
+cd /home/tang/tools
+wget http://cn2.php.net/get/php-5.3.29.tar.gz/from/this/mirror
+tar zxf php-5.3.29.tar.gz
+cd php-5.3.29
+./configure \
+--prefix=/application/php5.3.29 \
+--with-mysql=mysqlnd \
+--with-iconv-dir=/usr/local/libiconv \
+--with-freetype-dir \
+--with-jpeg-dir \
+--with-png-dir \
+--with-zlib \
+--with-libxml-dir=/usr \
+--enable-xml \
+--disable-rpath \
+--enable-safe-mode \
+--enable-bcmath \
+--enable-shmop \
+--enable-sysvsem \
+--enable-inline-optimization \
+--with-curl \
+--with-curlwrappers \
+--enable-mbregex \
+--enable-fpm \
+--enable-mbstring \
+--with-mcrypt \
+--with-gd \
+--enable-gd-native-ttf \
+--with-openssl \
+--with-mhash \
+--enable-pcntl \
+--enable-sockets \
+--with-xmlrpc \
+--enable-zip \
+--enable-soap \
+--enable-short-tags \
+--enable-zend-multibyte \
+--enable-static \
+--with-xsl \
+--with-fpm-user=www \
+--with-fpm-group=www \
+--enable-ftp
+
+#如使用--with-mysql=/application/mysql 则需要创建如下链接ln -s /application/mysql/lib/libmysqlclient.so.18 /usr/lib64
+touch ext/phar/phar.phar
+make
+make install
+ln -s /application/php5.3.29 /application/php
+cp php.ini-production /application/php/lib/php.ini
+
+#配置FastCGI
+cd /application/php/etc
+cp php-fpm.conf.default php-fpm.conf
+/application/php/sbin/php-fpm
+
+#修改Nginx配置
+
+cat > /application/nginx/conf/extra/www.conf <<EOF
+    server {
+        listen       80;
+        server_name  www.tang.com;
+        access_log    logs/www_access.log main;
+        location / {
+            root   html/www;
+            index  index.html index.htm;
+        }
+        location /documents/ {
+        auth_basic  "closed site";
+        auth_basic_user_file /appliction/nginx/conf/htpasswd;
+        }
+        location ~ .*\.(php|php5) {
+        root html/www;
+        fastcgi_pass    127.0.0.1:9000;
+        fastcgi_index   index.php;
+        include fastcgi.conf;
+        }
+        access_log    logs/www_access.log main gzip buffer=64k flush=5s;
+    }
+EOF
+/application/nginx/sbin/nginx -t
+/application/nginx/sbin/nginx -s reload
+
+echo "<?php phpinfo(); ?>" /application/nginx/html/www/test.php
+
+#测试数据库
+cat > /appliction/nginx/html/www/mysql_test.php <<EOF
+<?php 
+\$link=mysql_connect("192.168.237.12","tang","tang123"); 
+if(!\$link) echo "FAILD!连接错误，用户名密码不对"; 
+else echo "OK!可以连接"; 
+
+?>
+EOF

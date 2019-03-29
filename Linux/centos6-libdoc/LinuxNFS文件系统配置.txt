@@ -1,0 +1,133 @@
+2013-02-01 17:45 Linux下NFS Mount配置一、服务端NFS配置
+
+
+
+
+
+1. 配置共享目录
+
+[root@localhost ~]# vim /etc/exports 
+
+# 客户端匿名读写，指定服务端uid和gid，便于服务端使用指定帐号权限处理文件
+
+# 指定ip段权限
+
+/data0/apache/mnt  172.16.0.0/16(rw,no_wdelay,insecure,all_squash,anonuid=101,anongid=105) 
+
+/data0/apache/mnt  10.55.17.*(rw,no_wdelay,insecure,all_squash,anonuid=101,anongid=105)
+
+
+
+
+2. 启动NFS服务
+
+启动portmap (服务端和客户端都需要)
+
+[root@localhost ~]#/etc/rc.d/init.d/portmap start
+
+
+
+
+启动NFS服务 
+
+
+[root@localhost ~]#/etc/rc.d/init.d/nfs start 
+
+(停止：/etc/rc.d/init.d/nfs stop) 
+
+
+
+
+二、客户端mount挂载
+
+开始挂载之前，客户端也需要开启portmap服务
+
+
+
+
+[root@localhost ~]#/etc/rc.d/init.d/portmap start
+
+
+[root@localhost ~]#mkdir /data0/apache/datalog/mnt
+
+[root@localhost ~]#mkdir /data0/apache/datalog/mnt/mem
+
+
+[root@localhost ~]#mkdir /data0/apache/datalog/mnt/mid
+
+
+[root@localhost ~]#mkdir /data0/apache/datalog/mnt/source
+
+
+[root@localhost ~]#mkdir /data0/apache/datalog/mnt/script
+
+
+[root@localhost ~]#mkdir /data0/apache/datalog/mnt/db
+
+
+
+
+[root@localhost ~]#chown -R 101:105 /data0/apache/datalog/mnt
+
+[root@localhost ~]#chmod 777 /data0/apache/datalog/mnt
+
+
+
+
+[root@localhost ~]# mount -t nfs -o rw 172.16.38.132:/share/HDA_DATA/YHBD_A /data0/apache/datalog/mnt/mem
+
+
+[root@localhost ~]# mount -t nfs -o rw 172.16.38.133:/data0/apache/mnt/mid  /data0/apache/datalog/mnt/mid
+
+
+[root@localhost ~]# mount -t nfs -o rw 172.16.38.181:/data0/apache/mnt/source  /data0/apache/datalog/mnt/source
+
+
+[root@localhost ~]# mount -t nfs -o rw 172.16.38.182:/data0/apache/mnt/db  /data0/apache/datalog/mnt/db
+
+
+[root@localhost ~]# mount -t nfs -o rw 172.16.38.182:/data0/apache/mnt/script  /data0/apache/datalog/mnt/script
+
+
+
+
+
+看一下挂载情况
+
+[gateway@localhost mnt]$ df -h
+
+Filesystem            Size  Used Avail Use% Mounted on
+
+/dev/sda1             2.0G  646M  1.3G  35% /
+
+/dev/sda7             1.1T  597G  403G  60% /data0
+
+/dev/sda6             3.9G  2.3G  1.5G  61% /var
+
+/dev/sda5             3.9G  272M  3.5G   8% /tmp
+
+/dev/sda3             9.7G  3.3G  6.0G  36% /usr
+
+tmpfs                  24G     0   24G   0% /dev/shm
+
+172.16.38.132:/data0/apache/mnt/mem
+
+                       11T  7.2T  3.1T  71% /data0/apache/datalog/mnt/mem
+
+172.16.38.133:/data0/apache/mnt/mid
+
+                       11T  7.2T  3.1T  71% /data0/apache/datalog/mnt/mid
+
+172.16.38.182:/data0/apache/mnt/db
+
+                       11T  8.1T  2.2T  79% /data0/apache/datalog/mnt/db
+
+172.16.38.182:/data0/apache/mnt/script
+
+                       11T  8.1T  2.2T  79% /data0/apache/datalog/mnt/script 
+
+
+
+
+[root@localhost ~]#/etc/rc.d/init.d/portmap start
+[root@localhost ~]# mount -t nfs -o rw 192.168.2.100:/share/HDA_DATA/YHBD_A /var/mountnfs

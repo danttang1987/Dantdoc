@@ -1,0 +1,107 @@
+#NFS在传输过程中会使用随机端口进行通信，主要依靠RPC服务来实现；
+#在5.8以前需要portmap服务，6.7以后需要rpcbind服务
+
+sed -i '/HOSTNAME=/d;1aHOSTNAME=nfs01' /etc/sysconfig/network
+sed -i '/IPADDR=/d;/NETMASK/iIPADDR=192.168.237.14' /etc/sysconfig/network-scripts/ifcfg-eth0
+echo "192.168.237.10    web01" >> /etc/hosts
+echo "192.168.237.11    web02" >> /etc/hosts
+echo "192.168.237.12    db01" >> /etc/hosts
+echo "192.168.237.13    db02" >> /etc/hosts
+echo "192.168.237.14    nfs01" >> /etc/hosts
+
+#1、安装NFS软件
+#NFS软件列表
+#nfs-utils
+#rpcbind
+rpm -qa nfs-utils
+rpm -qa rpcbind
+yum install nfs-utils rpcbind -y
+rpm -qa nfs-utils
+##rpm -qa rpcbindnfs-utils-1.2.3-78.el6_10.1.x86_64
+rpm -qa rpcbind
+##rpcbind-0.2.0-16.el6.x86_64
+
+
+#2、启动rpcbind服务
+LANG=en
+/etc/init.d/rpcbind status
+rpcinfo -p localhost
+/etc/init.d/rpcbind start
+rpcinfo -p localhost     
+##   program vers proto   port  service
+##    100000    4   tcp    111  portmapper
+##    100000    3   tcp    111  portmapper
+##    100000    2   tcp    111  portmapper
+##    100000    4   udp    111  portmapper
+##    100000    3   udp    111  portmapper
+##    100000    2   udp    111  portmapper
+
+#3、启动nfs服务，启动nfs前需要确认rpcbind是否正常启动
+/etc/init.d/rpcbind status
+rpcinfo -p localhost
+/etc/init.d/nfs status
+##rpc.svcgssd is stopped
+##rpc.mountd is stopped
+##nfsd is stopped
+##rpc.rquotad is stopped
+/etc/init.d/nfs start
+/etc/init.d/nfs status
+##rpc.svcgssd is stopped
+##rpc.mountd (pid 1471) is running...
+##nfsd (pid 1487 1486 1485 1484 1483 1482 1481 1480) is running...
+##rpc.rquotad (pid 1466) is running...
+#查看rpc服务的注册状态
+rpcinfo -p localhost
+
+#4、配置nfs开机启动
+chkconfig rpcbind on
+chkconfig nfs on
+#或将启动添加到rc.local中此方法可以统一管理
+
+#5、NFS配置
+#nfs配置文件是/etc/exports文件默认为空
+#配置文件格式如下：
+#NFS共享目录	NFS客户端地址（参数1，参数2，参数3）	NFS客户端地址2（参数1，参数2，参数3）
+mkdir /data
+echo "/data 192.168.237.10(rw,)" >> /etc/exports
+#注：如需要允许客户端写入，需要nfsnobody对目录有读写权限/data
+chown nfsnobody.nfsnobody /data
+#客户端的地址可是一个IP，一个网段，一个域名，或带通配符
+
+
+#常用参数说明：可使用man exports查看详细信息
+#rw     可读可写
+#ro     只读
+#sync   写入数据时，数据同步到磁盘上在返回结果。优化安全，缺点性能不好；
+#async  写入数据先缓存在内存，就返回结果，需要等待系统同步到磁盘，
+#no_root_squash    访问NFS服务器目录如果是root权限，那用户对目录具有root权限，不建议使用
+#root_squash        访问NFS服务器目录如果是root权限，将压缩成匿名用户，同时UID和GID会变成nfsnobody
+#all_squash       不管访问NFS共享目录的用户身份如何，都将被压缩成匿名用户，同时UID和GID会变成nfsnobody
+#anonuid
+#anongid
+#
+#配置好后可以通过cat /var/lib/nfs/etab查看NFS配置的参数以及默认自带的参数。
+cat /var/lib/nfs/etab 
+#/data   192.168.237.10(rw,sync,wdelay,hide,nocrossmnt,secure,root_squash,no_all_squash,no_subtree_check,secure_locks,acl,anonuid=65534,anongid=65534,sec=sys,rw,root_squash,no_all_squash)
+
+#通过showmount -e localhost查看本地可挂载的
+showmount -e localhost
+##Export list for localhost:
+##/data 192.168.237.10
+
+
+客户端需要安装rpcbind,并启动该服务。
+#挂载nfs,注：如在host文件中配置记录需要添加相应主机名权限
+mount -t nfs 192.168.237.14:/data /mnt
+#挂载成功后可以通过cat /var/lib/nfs/rmtab或cat /proc/mounts检查；
+
+
+#NFS修改配置文件后不需要重启服务器可用以下两个命令加载新的配置
+/etc/init.d/nfs reload
+exportfs -rv
+
+
+#问题一：挂载时提示如下报错
+#[root@nfs01 ~]# mount -t nfs 192.168.237.14:/data /mnt
+#mount.nfs: access denied by server while mounting 192.168.237.14:/data
+#此问题可能有很多种原因，本次原因为配置了hosts文件的记录，但没有为相应的主机名授权。

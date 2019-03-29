@@ -1,0 +1,65 @@
+﻿#部署Workpress
+#在DB01上配置
+mysql -uroot -pasdf131 -e "create database Wordpress;"
+mysql -uroot -pasdf131 -e "grant all on Wordpress.* to wordpress@'192.168.237.%' identified by '123456';"
+
+mysql -uroot -pasdf131 -e "show grants for wordpress@'192.168.237.%';"
+
+#配置nginx服务器上blog虚拟主机
+cat > /application/nginx/conf/extra/blog.conf <<EOF
+    server {
+        listen       80;
+        server_name  blog.tang.com;
+        access_log    logs/blog_access.log main;
+        location / {
+            root   html/blog;
+            index  index.php index.html index.htm;
+        }
+        location ~ .*\.(php|php5)\$ {
+        root    html/blog;
+        fastcgi_pass    127.0.0.1:9000;
+        fastcgi_index   index.php;
+        include fastcgi.conf;
+        }
+        access_log    logs/blog_access.log main gzip buffer=64k flush=5s;
+    }
+EOF
+
+sed -i '/include extra\/status.conf;/iinclude extra\/blog.conf;' /application/nginx/conf/nginx.conf
+mkdir /appliction/nginx/html/blog
+wget https://wordpress.org/wordpress-4.1.24.tar.gz
+tar xf wordpress-4.1.24.tar.gz
+mv wordpress/* ./
+chown -R www.www ../
+
+#配置Wordpress静态化
+#在设置中-配置固定链接，自定义结构增加/archives/%post_id%.html
+#在Nginxs配置文件中的blog.www配置文档修改如下
+cat > /application/nginx/conf/extra/blog.conf <<EOF
+    server {
+        listen       80;
+        server_name  blog.tang.com;
+        access_log    logs/blog_access.log main;
+        root   html/blog;
+        index  index.php index.html index.htm;
+        location / {
+            if (-f $request_filename/index.html) {
+                rewrite (.*) $1/index.html break;
+                }
+            if (-f $request_filename/index.php) {
+                rewrite (.*) $1/index.php;
+                }
+            if (!-f $request_filename) {
+                rewrite (.*) /index.php;
+                }
+        }
+        location ~ .*\.(php|php5)$ {
+        root    html/blog;
+        fastcgi_pass    127.0.0.1:9000;
+        fastcgi_index   index.php;
+        include fastcgi.conf;
+        }
+        access_log    logs/blog_access.log main gzip buffer=64k flush=5s;
+    }
+EOF
+

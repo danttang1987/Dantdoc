@@ -1,0 +1,20 @@
+#mysql主从复制
+#1、在主库上开log-bin ,在主的my.cnf上添加如下
+[mysqld]
+log-bin = /data/3307/mysql-bin
+server-id = 1
+
+#2、检查mysql_id和log_bin配置
+mysql -uroot -p123.com -S /data/3307/mysql.sock -e "show variables like 'server_id'"
+mysql -uroot -p123.com -S /data/3307/mysql.sock -e "show variables like 'log_bin'"
+
+#3、创建mysql复制的帐户
+mysql -uroot -p123.com -S /data/3307/mysql.sock -e "grant replication slave on *.* to 'rep'@'192.168.237.%' identified by '1234.com'"
+mysql -uroot -p123.com -S /data/3307/mysql.sock -e "select user,host from mysql.user;"
+mysql -uroot -p123.com -S /data/3307/mysql.sock -e "show grants for rep@'192.168.237.%';"
+
+#4、备份数据库
+#先要锁表
+mysql -uroot -p123.com -S /data/3307/mysql.sock -e "flush table with read lock;"
+
+

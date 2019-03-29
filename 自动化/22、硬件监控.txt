@@ -1,0 +1,57 @@
+22、硬件监控
+
+远程控制卡：dell服务器：iDRAC
+			HP服务器：ILO
+			IBM服务器：IMM
+
+IPMI:Linux可以使用IPMI监控服务器硬件    BMC控制器
+
+Linux下使用ipmitool工具来监控：条件
+	1、硬件支持
+	2、操作系统支持
+	3、管理工具ipmi tool
+	
+yum install openIPMI ipmitool -y
+
+
+使用IPMI有两种方式：
+1、本地调用
+2、远程调用  ip 用户名和密码
+
+使用ipmitool命令调用：
+ipmitool help
+
+
+
+路由和交换机使用：snmp监控
+
+yum install -y net-snmp net-snmp-utils
+echo "rocommity zishan 192.168.237.200"
+systemctl start snmpd
+
+
+使用snmp-utils工具来向Agent获取数据
+
+
+MIB(管理信息库)是一个树结构
+
+
+OID：每一个对象都有一个标识符OID
+
+
+snmpget -v2c -c zishan 192.168.234.200 1.3.6.1.4.2021.10.1.3.1
+snmpwalk -v2c -c zishan 192.168.234.200 1.3.6.1.4.2021.10.1.3
+
+
+
+
+
+
+
+
+
+
+
+
+
+	

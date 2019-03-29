@@ -1,0 +1,34 @@
+Redis-客户端统计
+
+info clients
+
+[root@redis01 ~]# redis-cli info clients;
+# Clients
+connected_clients:2             ##当前Redis客户端连接数 
+client_longest_output_list:0    ##当前所有输出缓冲区中队列对象个数最大的值
+client_biggest_input_buf:0      ##当前所有输入缓冲区队列中占用空间最大的值
+blocked_clients:0               ##下在执行阻塞命令的客户端个数（blpop/brpop/brpoplpush）
+
+info stats
+
+[root@redis01 ~]# redis-cli info stats
+# Stats
+total_connections_received:42       自启动以来处理客户端连接的总数
+total_commands_processed:48
+instantaneous_ops_per_sec:0
+total_net_input_bytes:1426
+total_net_output_bytes:74215
+instantaneous_input_kbps:0.00
+instantaneous_output_kbps:0.00
+rejected_connections:0             自启动以来拒绝的客户端连接数，需要重点监控
+sync_full:0
+sync_partial_ok:0
+sync_partial_err:0
+expired_keys:0
+evicted_keys:0
+keyspace_hits:1
+keyspace_misses:1
+pubsub_channels:0
+pubsub_patterns:0
+latest_fork_usec:1734
+migrate_cached_sockets:0

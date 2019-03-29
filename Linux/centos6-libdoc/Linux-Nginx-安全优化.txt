@@ -1,0 +1,43 @@
+﻿#调整参数隐藏Nginx软件版本号
+#通过在http标签中配置server_tokens of
+
+#修改软件名称，需要在编译之前将原码中的三个文件修改
+
+#1/src/core/nginx.h
+     12 #define nginx_version      2050100      #修改此行
+     13 #define NGINX_VERSION      "2.5.1"      #修改此行
+     14 #define NGINX_VER          "THT Web Server/" NGINX_VERSION     #修改此行
+     15 
+     16 #ifdef NGX_BUILD
+     17 #define NGINX_VER_BUILD    NGINX_VER " (" NGX_BUILD ")"
+     18 #else
+     19 #define NGINX_VER_BUILD    NGINX_VER
+     20 #endif
+     21 
+     22 #define NGINX_VAR          "THT Web Server"     #修改此行
+#2、src/http/ngx_http-dhader_filer_module.c
+cd /home/tht/tools/nginx-1.14.0/src/http
+sed -i 's/Server: nginx/Server THT WebServer/g' ngx_http_header_filter_module.c
+#修改第三个文件/src/http/ngx_http_special_response.c
+ 21 static u_char ngx_http_error_full_tail[] =
+ 22 "<hr><center>" NGINX_VER (http://www.tang.com) "</center>" CRLF      #修改此行
+ 23 "</body>" CRLF
+ 24 "</html>" CRLF
+ 25 ;
+ 26 
+ 27 
+ 28 static u_char ngx_http_error_build_tail[] =
+ 29 "<hr><center>" NGINX_VER_BUILD "</center>" CRLF
+ 30 "</body>" CRLF
+ 31 "</html>" CRLF
+ 32 ;
+ 33 
+ 34 
+ 35 static u_char ngx_http_error_tail[] =
+ 36 "<hr><center>THT WebServer</center>" CRLF         #修改此行
+
+#配置Nginx默认用户，可通过两种方式配置，1、在nginx.conf配置文件中配置user = nginx nginx; 2、在编译安装配置是指定--user=nginx --group-nginx
+
+
+Nginx站点目录权限需要严格控制
+所有站点的用户和组都应该是为root,所有目录权限是755，所有文件权限是644，

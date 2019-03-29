@@ -1,0 +1,57 @@
+1、慢查询分析
+   1）慢查询的两个参数设置参数设置
+   slowlog-log-slower-than        预设置阀值设置（以微秒为单位，默认为10000）
+   
+   slowlog-max-len    慢查询最多存储多少条（默认为128）
+   
+   可通过如下命令设置
+   config set slowlog-log-slower-than 20000
+   config set slowlog-max-len 1000
+   config rewrite
+   
+   2）慢查询的查看
+   slowlog get [n]    查看n条
+######   127.0.0.1:6380> slowlog get
+######1) 1) (integer) 1             ##标识ID
+######   2) (integer) 1544691671    ##发生的时间戳
+######   3) (integer) 28            ##命令耗时
+######   4) 1) "keys"               ##执行的命令
+######      2) "*"                  ##命令的参数
+######2) 1) (integer) 0
+######   2) (integer) 1544691654
+######   3) (integer) 10
+######   4) 1) "slowlog"
+######      2) "get"
+   
+
+   3）获取慢查询的长度
+   slowlog len
+   
+   4）重置慢查询日志
+   slowlog reset
+    
+
+    慢查询最佳实践
+    1、slowlog-max-len配置建议设置1000以上，增大记录慢查询的数量；
+    2、slowlog-log-slower-than配置建议：1毫秒（默认为10毫秒），如命令执行时间为1毫秒那服务器可支撑的OPS不到1000，	
+    3、慢查询只记录命令执行的时间，不包括网络和排队
+	
+
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   

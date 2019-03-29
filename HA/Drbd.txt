@@ -1,0 +1,168 @@
+Drbd
+
+https://docs.linbit.com/docs/users-guide-8.4/#s-linbit-packages
+
+是一个基于块设备的在不同高可用的服务器之间镜像数据软件
+
+两种同步模式
+1。实时模式：协议C为实时模式
+2。异步模式：分为两种
+	协议A：本地写完全，就返回成功，发送到远端的数据还放在发送的Bufer中
+	协议B：是一种半同步模式，本地写成功，发送到对端后就返回。
+
+部署
+
+配置主机名，host文件
+
+关防火墙/selinex/时间同步
+
+新建分区
+
+需要两个分区，一个是数据，一个是状态(mata data)
+
+分区可以使用fdisk或parted（如大小2TB需要使用parted）
+
+partprobe  (重新加载分区表)
+
+
+注：matadata不能格式化
+	已经格式化的数据分区不需要挂载
+
+格式化数据分区
+mkfs.ext4 /dev/sdb1
+Drbd 编译安装
+#####################################################################
+mkdir /home/tht/tools -p
+cd /home/tht/tools
+export LC_ALL=C
+wget https://www.linbit.com/downloads/drbd/8.4/drbd-8.4.11-1.tar.gz
+tar xf drbd-8.4.11-1.tar.gz
+cd drbd-8.4.11-1
+./configure --prefix=/application/drbd-utils-9.7.1 --with-km --with-heartbeat --sysconfdir=/etc
+
+https://www.linbit.com/downloads/drbd/utils/drbd-utils-9.7.1.tar.gz
+
+
+wget https://www.linbit.com/downloads/drbd/9.0/drbd-9.0.16-1.tar.gz
+
+##################################################################
+
+Drbd RPM安装
+####################################################
+
+wget ftp.scientificlinux.org/linux/scientific/6.9/x86_64/os/Packages/elrepo-release-6-6.el6.elrepo.noarch.rpm
+rpm -ivh elrepo-release-6-6.el6.elrepo.noarch.rpm
+yum install drbd84-utils kmod-drbd84 -y
+###################################################
+
+
+modprobe drbd
+lsmod | grep drbd
+
+
+
+[root@d02 etc]# ll drbd.conf   
+-rw-r--r-- 1 root root 133 Sep 28 07:06 drbd.conf
+[root@d02 etc]# ll drbd.d
+total 4
+-rw-r--r-- 1 root root 2563 Sep 28 07:06 global_common.conf
+
+
+
+global {
+  usage-count yes;
+}
+common {
+  syncer {
+    rate 100M;
+	verify-alg crc32c;
+  }
+  net {
+    protocol C;
+  }
+}
+
+resource data {
+  protocol C;
+  on d01 {
+    device    /dev/drbd1;
+    disk      /dev/sdb1;
+    address   10.10.10.31:7789;
+    meta-disk /dev/sdb2[0];
+  }
+  on d02 {
+    device    /dev/drbd1;
+    disk      /dev/sdb1;
+    address   10.10.10.32:7789;
+    meta-disk /dev/sdb2[0];
+  }
+}
+
+
+注：以下中data表示配置文件中的资源名称
+初始化mataData
+
+drbdadm create-md data
+
+启动服务
+drbdadm up data
+
+手动同步数据
+drbdadm -- --overwrite-data-of-peer primary data
+
+将其中一个节点设置为Master
+drbdadm primary --force data
+
+可通过查看/proc/drbd
+
+[root@d02 etc]# cat /proc/drbd 
+version: 8.4.11-1 (api:1/proto:86-101)
+GIT-hash: 66145a308421e9c124ec391a7848ac20203bb03c build by mockbuild@Build64R6, 2018-09-28 19:18:36
+
+ 1: cs:Connected ro:Primary/Secondary ds:UpToDate/UpToDate C r-----
+    ns:795186 nr:0 dw:0 dr:795846 al:8 bm:0 lo:0 pe:0 ua:0 ap:0 ep:1 wo:f oos:0
+
+挂载数据
+ mount /dev/drbd1 /data1
+
+ 
+
+监控状态
+cs:connected  为连接状态
+ro:Primary/Secondary  表示角色
+ds:UpToDate/UpToDate  表示同步状态
+
+ns:网络发送（字节）
+nr:网络接收（字节）
+dw:硬盘写
+dr:硬盘的读
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+########################################################
+问题处理：
+如两端启动，并角色状态为unknown，解决方法如下：
+  drbdadm secondary data
+  drbdadm -- --discard-my-data connect data
+  
+  在主节点上执行
+  drbdadm connect data
+
+
+
+
+
+
+挂载mata Data
+mount /dev/sdb2 /

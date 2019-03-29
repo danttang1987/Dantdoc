@@ -1,0 +1,69 @@
+Mysql 备份
+mysqldump -uroot -p123.com -S /data/3307/mysql.sock
+
+-B/--database   备份多个数据库， 并且有创建库的语句和切换数据库（use tang_db）
+gzip 压缩备份数据
+
+mysqldump -uroot -p123.com -S /data/3307/mysql.sock -B tang_db t_db | gzip >tang_db_and_t_db.bak.sql.gz
+
+分库备份
+mysql -uroot -p123.com -S /data/3307/mysql.sock -e 'show databases;'|egrep -iv "mysql|database|inform|performance|test" |sed -r 's#^(.*$)#mysqldump -uroot -p123.com -S /data/3307/mysql.sock -B \1 |gzip>\1.bak.sql.gz#' |bash
+
+
+备份表
+mysqldump -uroot -p123.com -S /data/3307/mysql.sock 库名 表名 | gzip >tang_db_t01.bak.sql.gz
+在不加-B的情况下，结尾的两个以上字符串，第一个是库名，后面都是表名
+
+
+备份表结构
+mysqldump -uroot -p123.com -S /data/3307/mysql.sock -d -B tang_db 
+-d  备份表结构
+
+
+备份数据
+mysqldump -uroot -p123.com -S /data/3307/mysql.sock -t -B tang_db 
+-t  备份数据
+
+
+
+-A -B --events  备份所有数据库
+mysqldump -uroot -p123.com -S /data/3307/mysql.sock -A -B --events
+
+-F    刷新Binlog
+mysqldump -uroot -p123.com -S /data/3307/mysql.sock -A -B --events -F
+
+
+--master-data=1
+mysqldump -uroot -p123.com -S /data/3307/mysql.sock -A -B --events --master-data=1
+作用：在备份中记录Binlog的位置
+CHANGE MASTER TO MASTER_LOG_FILE='mysql-bin.000027', MASTER_LOG_POS=107;
+
+--master-data=2  注释Binlog位置点
+
+-x或--lock-all-tables   锁表
+
+-l 或 --lock-tables 只读锁表
+
+--single-transaction    适合innodb事务数据库备份；
+
+
+生产备份
+myisam存储
+mysqldump -uroot -p123.com -S /data/3307/mysql.sock -A -B -F --triggers --routines --hex-blob --flush-privileges --events --master-data=2 -x|gzip >/opt/all.sql.gz
+
+InnoDB
+mysqldump -uroot -p123.com -S /data/3307/mysql.sock -A -B -F --triggers --routines --hex-blob --flush-privileges --events --master-data=2 --single-transaction|gzip >/opt/all.sql.gz
+
+####################################################################
+恢复数据库
+1、登录mysql使用source 
+
+2、使用mysql <导入sql
+
+压缩的文件解压
+gzip -d mysql.sql.gz
+
+
+
+ls *.gz |tr ' ' '\n'|xargs gzip -d 
+ls *.sql |tr ' ' '\n'| awk '{print "mysql -uroot -p123.com -S /data/3307/mysql.sock <"$1}'|bash

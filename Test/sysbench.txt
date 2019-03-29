@@ -1,0 +1,496 @@
+另外，为了方便管理测试，最好不要通过命令直接运行测试，而是写成脚本自动化执行测试。
+
+1. 安装及简介
+Linux 各大发行版通过自带安装工具直接安装即可，RHEL/CentOS 的安装命令如下：
+
+sudo yum -y install sysbench
+1
+sysbench 可以进行以下测试：
+
+CPU 运算性能测试
+磁盘 IO 性能测试
+调度程序性能测试
+内存分配及传输速度测试
+POSIX 线程性能测试
+数据库性能测试（OLTP 基准测试，需要通过 /usr/share/sysbench/ 目录中的 Lua 脚本执行，例如 oltp_read_only.lua 脚本执行只读测试）
+另外，sysbench 还可以通过运行命令时指定自己的 Lua 脚本来自定义测试。
+
+2. 使用
+2.1 查看帮助信息
+sysbench --help
+可以通过 sysbench --help 查看 sysbench 的可用命令、选项及內建测试类型的帮助信息，不同测试类型可用的命令也不同：
+
+[root@VM_157_18_centos ~]# sysbench --help
+Usage:
+  sysbench [options]... [testname] [command]
+
+Commands implemented by most tests: prepare run cleanup help # 可用的命令，四个
+
+General options:            # 通用选项
+  --threads=N                     要使用的线程数，默认 1 个 [1]
+  --events=N                      最大允许的事件个数 [0]
+  --time=N                        最大的总执行时间，以秒为单位 [10]
+  --forced-shutdown=STRING        在 --time 时间限制到达后，强制关闭之前等待的秒数，默认“off”禁用（number of seconds to wait after the --time limit before forcing shutdown, or 'off' to disable） [off]
+  --thread-stack-size=SIZE        每个线程的堆栈大小 [64K]
+  --rate=N                        平均传输速率。0 则无限制 [0]
+  --report-interval=N             以秒为单位定期报告具有指定间隔的中间统计信息 0 禁用中间报告 [0]
+  --report-checkpoints=[LIST,...] 转储完整的统计信息并在指定的时间点重置所有计数器。参数是一个逗号分隔的值列表，表示从测试开始经过这个时间量时必须执行报告检查点（以秒为单位）。报告检查点默认关闭。 []
+  --debug[=on|off]                打印更多 debug 信息 [off]
+  --validate[=on|off]             尽可能执行验证检查 [off]
+  --help[=on|off]                 显示帮助信息并退出 [off]
+  --version[=on|off]              显示版本信息并退出 [off]
+  --config-file=FILENAME          包含命令行选项的文件
+  --tx-rate=N                     废弃，改用 --rate [0]
+  --max-requests=N                废弃，改用 --events [0]
+  --max-time=N                    废弃，改用 --time [0]
+  --num-threads=N                 废弃，改用 --threads [1]
+
+Pseudo-Random Numbers Generator options:    # 伪随机数发生器选项
+  --rand-type=STRING random numbers distribution {uniform,gaussian,special,pareto} [special]
+  --rand-spec-iter=N number of iterations used for numbers generation [12]
+  --rand-spec-pct=N  percentage of values to be treated as 'special' (for special distribution) [1]
+  --rand-spec-res=N  percentage of 'special' values to use (for special distribution) [75]
+  --rand-seed=N      seed for random number generator. When 0, the current time is used as a RNG seed. [0]
+  --rand-pareto-h=N  parameter h for pareto distribution [0.2]
+
+Log options:    # 日志选项
+  --verbosity=N verbosity level {5 - debug, 0 - only critical messages} [3]
+
+  --percentile=N       percentile to calculate in latency statistics (1-100). Use the special value of 0 to disable percentile calculations [95]
+  --histogram[=on|off] print latency histogram in report [off]
+
+General database options:   # 通用的数据库选项
+
+  --db-driver=STRING  指定要使用的数据库驱动程序 ('help' to get list of available drivers)
+  --db-ps-mode=STRING prepared statements usage mode {auto, disable} [auto]
+  --db-debug[=on|off] print database-specific debug information [off]
+
+
+Compiled-in database drivers:   # 內建的数据库驱动程序，默认支持 MySQL 和 PostgreSQL
+  mysql - MySQL driver
+  pgsql - PostgreSQL driver
+
+mysql options:              # MySQL 数据库专用选项
+  --mysql-host=[LIST,...]          MySQL server host [localhost]
+  --mysql-port=[LIST,...]          MySQL server port [3306]
+  --mysql-socket=[LIST,...]        MySQL socket
+  --mysql-user=STRING              MySQL user [sbtest]
+  --mysql-password=STRING          MySQL password []
+  --mysql-db=STRING                MySQL database name [sbtest]
+  --mysql-ssl[=on|off]             use SSL connections, if available in the client library [off]
+  --mysql-ssl-cipher=STRING        use specific cipher for SSL connections []
+  --mysql-compression[=on|off]     use compression, if available in the client library [off]
+  --mysql-debug[=on|off]           trace all client library calls [off]
+  --mysql-ignore-errors=[LIST,...] list of errors to ignore, or "all" [1213,1020,1205]
+  --mysql-dry-run[=on|off]         Dry run, pretend that all MySQL client API calls are successful without executing them [off]
+
+pgsql options:              # PostgreSQL 数据库专用选项
+  --pgsql-host=STRING     PostgreSQL server host [localhost]
+  --pgsql-port=N          PostgreSQL server port [5432]
+  --pgsql-user=STRING     PostgreSQL user [sbtest]
+  --pgsql-password=STRING PostgreSQL password []
+  --pgsql-db=STRING       PostgreSQL database name [sbtest]
+
+Compiled-in tests:          # 內建测试类型
+  fileio - File I/O test
+  cpu - CPU performance test
+  memory - Memory functions speed test
+  threads - Threads subsystem performance test
+  mutex - Mutex performance test
+
+See 'sysbench <testname> help' for a list of options for each test.
+
+sysbench <testname> help
+通过 sysbench <testname> help 命令可以查看具体一个测试类型的帮助信息。
+
+# sysbench fileio help
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+fileio options:
+  --file-num=N              number of files to create [128]
+  --file-block-size=N       block size to use in all IO operations [16384]
+  --file-total-size=SIZE    total size of files to create [2G]
+  --file-test-mode=STRING   test mode {seqwr, seqrewr, seqrd, rndrd, rndwr, rndrw}
+  --file-io-mode=STRING     file operations mode {sync,async,mmap} [sync]
+  --file-async-backlog=N    number of asynchronous operatons to queue per thread [128]
+  --file-extra-flags=STRING additional flags to use on opening files {sync,dsync,direct} []
+  --file-fsync-freq=N       do fsync() after this number of requests (0 - don't use fsync()) [100]
+  --file-fsync-all[=on|off] do fsync() after each write operation [off]
+  --file-fsync-end[=on|off] do fsync() at the end of test [on]
+  --file-fsync-mode=STRING  which method to use for synchronization {fsync, fdatasync} [fsync]
+  --file-merged-requests=N  merge at most this number of IO requests if possible (0 - don't merge) [0]
+  --file-rw-ratio=N         reads/writes ratio for combined test [1.5]
+
+2.2 测试 CPU
+CPU 测试时，会计算素数（对这个数字除以 2 到这个数字平方根之间的所有数字来验证素数）直到某个指定值所需要的时间。单纯的测试一组非常有限 CPU 硬件性能。
+
+CPU 基准测试时可以指定线程数量和素数上限。
+
+先查看帮助信息：
+
+[root@VM_157_18_centos ~]# sysbench cpu help
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+cpu options:
+  --cpu-max-prime=N 素数发生器的上限（upper limit for primes generator） [10000]
+
+开始测试：
+
+[root@VM_157_18_centos ~]# sysbench --cpu-max-prime=10000 --threads=2 cpu run
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+Running the test with following options:
+Number of threads: 2
+Initializing random number generator from current time
+
+
+Prime numbers limit: 10000
+
+Initializing worker threads...
+
+Threads started!
+
+CPU speed:
+    events per second:   727.23
+
+General statistics:
+    total time:                          10.0020s
+    total number of events:              7275
+
+Latency (ms):
+         min:                                  1.34
+         avg:                                  2.75
+         max:                                 39.37
+         95th percentile:                     12.30
+         sum:                              19982.10
+
+Threads fairness:
+    events (avg/stddev):           3637.5000/1.50
+    execution time (avg/stddev):   9.9911/0.00
+
+2.3 测试 fileio
+使用 fileio 时，需要创建一组测试文件，测试文件需要大于可用内存的大小，避免文件缓存在内存中影响结果。测试流程为：准备测试文件-》测试-》回收测试文件，命令如下：
+
+# sysbench --file-total-size=28G fileio prepare
+# sysbench --file-total-size=28G --file-test-mode=rndrw --time=300 --max-requests=0 fileio run
+# sysbench --file-total-size=28G fileio cleanup
+
+对于 I/O 基准测试，可以通过 --file-test-mode 告诉 sysbench 要运行的工作负载的类型，可用类型有：
+
+seqwr：顺序写入
+seqrewr：顺序重写
+seqrd：顺序读取
+rndrd：随机读取
+rndwr：随机写入
+rndrw：随机读取/写入
+上面的例子中使用的是随机读取/写入（rndrw）。通过 --time 选项指定测试持续时间（以秒为单位）。
+
+帮助信息：
+
+# sysbench fileio help
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+fileio options:
+  --file-num=N              number of files to create [128]
+  --file-block-size=N       block size to use in all IO operations [16384]
+  --file-total-size=SIZE    total size of files to create [2G]
+  --file-test-mode=STRING   test mode {seqwr, seqrewr, seqrd, rndrd, rndwr, rndrw}
+  --file-io-mode=STRING     file operations mode {sync,async,mmap} [sync]
+  --file-async-backlog=N    number of asynchronous operatons to queue per thread [128]
+  --file-extra-flags=STRING additional flags to use on opening files {sync,dsync,direct} []
+  --file-fsync-freq=N       do fsync() after this number of requests (0 - don't use fsync()) [100]
+  --file-fsync-all[=on|off] do fsync() after each write operation [off]
+  --file-fsync-end[=on|off] do fsync() at the end of test [on]
+  --file-fsync-mode=STRING  which method to use for synchronization {fsync, fdatasync} [fsync]
+  --file-merged-requests=N  merge at most this number of IO requests if possible (0 - don't merge) [0]
+  --file-rw-ratio=N         reads/writes ratio for combined test [1.5]
+
+命令的完整输出如下：
+
+[root@VM_157_18_centos ~]# sysbench --file-total-size=28G fileio prepare
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+128 files, 229376Kb each, 28672Mb total
+Creating files for the test...
+Extra file open flags: 0
+Creating file test_file.0
+Creating file test_file.1
+...此处总共创建了 128 个文件，每个 229376Kb，总共 28672Mb
+Creating file test_file.127
+30064771072 bytes written in 255.52 seconds (112.21 MiB/sec).
+[root@VM_157_18_centos ~]# sysbench --file-total-size=28G --file-test-mode=rndrw --time=300 --max-requests=0 fileio run
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+Running the test with following options:
+Number of threads: 1
+Initializing random number generator from current time
+
+Extra file open flags: 0
+128 files, 224MiB each
+28GiB total file size
+Block size 16KiB
+Number of IO requests: 0
+Read/Write ratio for combined random IO test: 1.50
+Periodic FSYNC enabled, calling fsync() each 100 requests.
+Calling fsync() at the end of test, Enabled.
+Using synchronous I/O mode
+Doing random r/w test
+Initializing worker threads...
+
+Threads started!
+
+
+File operations:
+    reads/s:                      96.00
+    writes/s:                     64.00
+    fsyncs/s:                     204.47
+
+Throughput:
+    read, MiB/s:                  1.50
+    written, MiB/s:               1.00
+
+General statistics:
+    total time:                          300.0016s
+    total number of events:              109341
+
+Latency (ms):
+         min:                                  0.00
+         avg:                                  2.74
+         max:                                256.76
+         95th percentile:                      7.17
+         sum:                             299726.28
+
+Threads fairness:
+    events (avg/stddev):           109341.0000/0.00
+    execution time (avg/stddev):   299.7263/0.00
+
+[root@VM_157_18_centos ~]# sysbench --file-total-size=28G fileio cleanup
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+Removing test files...
+
+2.4 测试 memory
+当在 sysbench 中进行内存测试时，会分配一个内存缓冲区并在此执行读写操作，每次操作都会读完或写满缓冲区。然后重复此操作直到达到指定大小（--memory-total-size）。可以提供多个线程（--threads），不同的缓冲区大小（--memory-block-size）和请求类型（读或写，顺序或随机）。
+
+帮助信息：
+
+# sysbench memory help
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+memory options:
+  --memory-block-size=SIZE    size of memory block for test [1K]
+  --memory-total-size=SIZE    total size of data to transfer [100G]
+  --memory-scope=STRING       memory access scope {global,local} [global]
+  --memory-hugetlb[=on|off]   allocate memory from HugeTLB pool [off]
+  --memory-oper=STRING        type of memory operations {read, write, none} [write]
+  --memory-access-mode=STRING memory access mode {seq,rnd} [seq]
+
+例如，指定 4 个线程，缓冲区大小为 8KB，在内存中传输 4GB 数据的测试：
+
+[root@VM_157_18_centos ~]# sysbench --threads=4  --memory-block-size=8k --memory-total-size=4G memory run
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+Running the test with following options:
+Number of threads: 4
+Initializing random number generator from current time
+
+Running memory speed test with the following options:
+  block size: 8KiB
+  total size: 4096MiB
+  operation: write
+  scope: global
+
+Initializing worker threads...
+
+Threads started!
+
+Total operations: 524288 (731249.24 per second)
+
+4096.00 MiB transferred (5712.88 MiB/sec)
+
+
+General statistics:
+    total time:                          0.7150s
+    total number of events:              524288
+
+Latency (ms):
+         min:                                  0.00
+         avg:                                  0.00
+         max:                                 43.03
+         95th percentile:                      0.00
+         sum:                               1871.33
+
+Threads fairness:
+    events (avg/stddev):           131072.0000/0.00
+    execution time (avg/stddev):   0.4678/0.04
+
+2.5 测试 threads
+测试 threads 时，每个工作线程将被分配一个 mutex（一种锁）。每次执行时，每个线程将循环若干次（通过 --thread-yields 的数量设置），循环时这个线程会锁定，在再次执行时解锁。
+
+通过调整各种参数，可以模拟具有单个或多个锁的高并发线程下的情况。 
+帮助信息：
+
+# sysbench threads help
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+threads options:
+  --thread-yields=N number of yields to do per request [1000]
+  --thread-locks=N  number of locks per thread [8]
+
+运行测试：
+
+[root@VM_157_18_centos ~]# sysbench --thread-yields=2000 --thread-locks=8 threads run
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+Running the test with following options:
+Number of threads: 1
+Initializing random number generator from current time
+
+
+Initializing worker threads...
+
+Threads started!
+
+
+General statistics:
+    total time:                          10.0002s
+    total number of events:              16554
+
+Latency (ms):
+         min:                                  0.50
+         avg:                                  0.60
+         max:                                 37.05
+         95th percentile:                      0.94
+         sum:                               9978.12
+
+Threads fairness:
+    events (avg/stddev):           16554.0000/0.00
+    execution time (avg/stddev):   9.9781/0.00
+
+2.6 测试 mutex
+测试 mutex 时，sysbench 将为每个线程运行一个请求。这个请求首先会对 CPU 施加一些压力（使用一个简单的增量循环，通过 --mutex-loops 参数设置），然后随机使用一个 mutex（锁），递增一个全局变量并再次释放锁。这个过程根据锁的个数（--mutex-locks）多次重复。随机 mutex 取自大小为 --mutex-num 的参数池。
+
+帮助信息：
+
+# sysbench mutex help
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+mutex options:
+  --mutex-num=N   total size of mutex array [4096]
+  --mutex-locks=N number of mutex locks to do per thread [50000]
+  --mutex-loops=N number of empty loops to do outside mutex lock [10000]
+
+运行测试：
+
+[root@VM_157_18_centos ~]# sysbench mutex run
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+Running the test with following options:
+Number of threads: 1
+Initializing random number generator from current time
+
+
+Initializing worker threads...
+
+Threads started!
+
+
+General statistics:
+    total time:                          0.2132s
+    total number of events:              1
+
+Latency (ms):
+         min:                                213.10
+         avg:                                213.10
+         max:                                213.10
+         95th percentile:                    211.60
+         sum:                                213.10
+
+Threads fairness:
+    events (avg/stddev):           1.0000/0.00
+    execution time (avg/stddev):   0.2131/0.00
+
+2.7 OLTP 基准测试
+OLTP 基准测试模拟了一个简单的事务处理系统的工作负载。然而最新版本的 sysbench 把 OLTP 这个曾经的內建测试类型移除了，如果要用，需要在命令中指定测试类型的位置用 /usr/share/sysbench/oltp_read_only.lua 脚本代替测试类型。
+
+流程：指定数据库-》建表并生成数据-》运行测试-》清理测试表。
+
+首先生成表，注意替换命令中的数据库密码和 MySQL 套接字，如果 MySQL 安装在默认位置，可以去掉 --mysql-socket 选项：
+
+sysbench --db-driver=mysql --mysql-user=root --mysql-password=<pwd> \
+  --mysql-socket=<mysql.sock path> --mysql-db=foo --range_size=100 \
+  --table_size=10000 --tables=2 --threads=2 --events=0 --time=60 \
+  --rand-type=uniform /usr/share/sysbench/oltp_read_only.lua prepare
+
+运行测试，指定了 2 个并发线程，：
+
+sysbench --db-driver=mysql --mysql-user=root --mysql-password=<pwd> \
+  --mysql-socket=<mysql.sock path> --mysql-db=foo --range_size=100 \
+  --table_size=10000 --tables=2 --threads=2 --events=0 --time=60 \
+  --rand-type=uniform /usr/share/sysbench/oltp_read_only.lua run
+
+清理测试时生成的测试表：
+
+sysbench --db-driver=mysql --mysql-user=root --mysql-password=<pwd> \
+  --mysql-socket=<mysql.sock path> --mysql-db=foo --range_size=100 \
+  --table_size=10000 --tables=2 --threads=2 --events=0 --time=60 \
+  --rand-type=uniform /usr/share/sysbench/oltp_read_only.lua cleanup
+
+例如我的选项就是：
+
+[root@VM_157_18_centos ~]# sysbench --db-driver=mysql --mysql-user=root --mysql-password=1qaz@WSX --mysql-db=foo --range_size=100 --table_size=10000 --tables=2 --threads=1 --events=0 --time=60 --rand-type=uniform /usr/share/sysbench/oltp_read_only.lua prepare
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+Creating table 'sbtest1'...
+Inserting 10000 records into 'sbtest1'
+Creating a secondary index on 'sbtest1'...
+Creating table 'sbtest2'...
+Inserting 10000 records into 'sbtest2'
+Creating a secondary index on 'sbtest2'...
+
+[root@VM_157_18_centos ~]# sysbench --db-driver=mysql --mysql-user=root --mysql-password=1qaz@WSX --mysql-db=foo --range_size=100 --table_size=10000 --tables=2 --threads=1 --events=0 --time=60 --rand-type=uniform /usr/share/sysbench/oltp_read_only.lua run
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+Running the test with following options:
+Number of threads: 1
+Initializing random number generator from current time
+
+
+Initializing worker threads...
+
+Threads started!
+
+SQL statistics:
+    queries performed:
+        read:                            645708
+        write:                           0
+        other:                           92244
+        total:                           737952
+    transactions:                        46122  (768.67 per sec.)
+    queries:                             737952 (12298.73 per sec.)
+    ignored errors:                      0      (0.00 per sec.)
+    reconnects:                          0      (0.00 per sec.)
+
+General statistics:
+    total time:                          60.0003s
+    total number of events:              46122
+
+Latency (ms):
+         min:                                  1.06
+         avg:                                  1.30
+         max:                                 34.08
+         95th percentile:                      1.50
+         sum:                              59896.08
+
+Threads fairness:
+    events (avg/stddev):           46122.0000/0
+[root@VM_157_18_centos ~]# sysbench --db-driver=mysql --mysql-user=root --mysql-password=1qaz@WSX --mysql-db=foo --range_size=100 --table_size=10000 --tables=2 --threads=1 --events=0 --time=60 --rand-type=uniform /usr/share/sysbench/oltp_read_only.lua cleanup
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+Dropping table 'sbtest1'...
+Dropping table 'sbtest2'...
+--------------------- 
+作者：kikajack 
+来源：CSDN 
+原文：https://blog.csdn.net/kikajack/article/details/79977108 
+版权声明：本文为博主原创文章，转载请附上博文链接！

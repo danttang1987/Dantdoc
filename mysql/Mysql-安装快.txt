@@ -1,0 +1,95 @@
+sed -i '/HOSTNAME=/d;1aHOSTNAME=d03' /etc/sysconfig/network
+sed -i '/IPADDR=/d;/NETMASK/iIPADDR=192.168.237.33' /etc/sysconfig/network-scripts/ifcfg-eth0
+echo "192.168.237.10    web01" >> /etc/hosts
+echo "192.168.237.11    web02" >> /etc/hosts
+echo "192.168.237.31    d01" >> /etc/hosts
+echo "192.168.237.32    d02" >> /etc/hosts
+echo "192.168.237.33    d03" >> /etc/hosts
+
+yum install cmake ncurses-devel libaio-devel -y
+useradd mysql -s /sbin/nologin -M
+mkdir /home/tht/tools -p
+cd /home/tht/tools
+wget https://cdn.mysql.com/archives/mysql-5.6/mysql-5.6.41.tar.gz
+
+tar zxf mysql-5.6.41.tar.gz 
+cd mysql-5.6.41
+
+
+mysql5.5编译参数
+
+cmake . -DCMAKE_INSTALL_PREFIX=/application/mysql5.6.41 \
+-DMYSQL_DATADIR=/application/mysql5.6.41/data \
+-DMYSQL_UNIX_ADDR=/application/mysql5.6.41/data/mysql.sock \
+-DDEFAULT_CHARSET=utf8 \
+-DDEFAULT_COLLATION=utf8_general_ci \
+-DEXTRA_CHARSETS=gbk,gb2312,utf8,ascii \
+-DENABLED_LOCAL_INFILE=ON \
+-DWITH_INNOBASE_STORAGE_ENGINE=1 \
+-DWITH_FEDERATED_STORAGE_ENGINE=1 \
+-DWITH_BLACKHOLE_STORAGE_ENGINE=1 \
+-DWITHOUT_EXAMPLE_STORAGE_ENGINE=1 \
+-DWITHOUT_PARTITION_STORAGE_ENGINE=1 \
+-DWITH_FAST_MUTEXES=1 \
+-DWITH_ZLIB=bundled \
+-DENABLED_LOCAL_INFILE=1 \
+-DWITH_EMBEDDED_SERVER=1 \
+-DWITH_DEBUG=0
+-DWITH_READLINE=1 \
+
+
+mysql 5.6编译参数
+
+cmake . -DCMAKE_INSTALL_PREFIX=/application/mysql5.6.41 \
+-DMYSQL_DATADIR=/application/mysql5.6.41/data \
+-DMYSQL_UNIX_ADDR=/application/mysql5.6.41/data/mysql.sock \
+-DDEFAULT_CHARSET=utf8 \
+-DDEFAULT_COLLATION=utf8_general_ci \
+-DEXTRA_CHARSETS=gbk,gb2312,utf8,ascii \
+-DENABLED_LOCAL_INFILE=ON \
+-DWITH_INNOBASE_STORAGE_ENGINE=1 \
+-DWITH_FEDERATED_STORAGE_ENGINE=1 \
+-DWITH_BLACKHOLE_STORAGE_ENGINE=1 \
+-DWITHOUT_EXAMPLE_STORAGE_ENGINE=1 \
+-DWITH_FAST_MUTEXES=1 \
+-DWITH_ZLIB=bundled \
+-DENABLED_LOCAL_INFILE=1 \
+-DWITH_EMBEDDED_SERVER=1 \
+-DWITH_DEBUG=0
+######################################################################
+
+
+make && make install
+
+
+
+ln -s /application/mysql5.6.41/ /application/mysql
+cp support-files/my-small.cnf /etc/my.cnf
+. /etc/profile
+which mysql
+echo "export PATH=/application/mysql/bin:$PATH" >>/etc/profile
+
+chown -R mysql.mysql /application/mysql/data/
+chmod 1777 /tmp
+/application/mysql/scripts/mysql_install_db --basedir=/application/mysql/ --datadir=/application/mysql/data/ --user=mysql
+cp /application/mysql/support-files/mysql.server /etc/init.d/mysqld
+chmod u+x /etc/init.d/mysqld
+/etc/init.d/mysqld start
+
+
+/application/mysql/bin/mysqladmin -u root password '123.com'
+
+mysql -uroot -p123.com
+
+
+mysql -uroot -p123.com -e "delete from mysql.user where host='d01';"
+mysql -uroot -p123.com -e "delete from mysql.user where host='::1';" 
+mysql -uroot -p123.com -e "delete from mysql.user where user='';"
+mysql -uroot -p123.com -e "drop database test;"
+
+echo "LANG='zh_CN.UTF-8'" >/etc/sysconfig/i18n 
+. /etc/sysconfig/i18n 
+
+
+
+

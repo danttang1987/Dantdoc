@@ -1,0 +1,134 @@
+SSH配置
+cp /etc/ssh/sshd_config{,.backup}
+
+#Port 52113
+#PermitRootLogin no   #root用户黑客都知道，禁止它远程登录
+#ListenAddress 10.10.0.23
+#PermitEmptyPasswords no #禁止空密码登录
+#UseDNS no
+
+sed -i '/^GSSAPIAuthentication/s/yes/no/g;10iPort 52113\nPermitRootLogin no\nPermitEmptyPasswords no\nUseDNS no' /etc/ssh/sshd_config
+
+SSH客户端命令
+ssh -p52113 tht@192.168.2.20 /sbin/ifconfig eth0
+-p 端口
+-t 打开终端
+
+
+每一次会产生一个密钥：~/.ssh/known_hosts
+
+scp -P52113 -rp /etc/hosts tht@192.168.237.20:/tmp
+-P  端口
+-r  目录
+-p  保持权限
+-l  限速
+
+
+sftp -oPort=52113 tht@192.168.237.20
+
+sftp> put /etc/hosts
+Uploading /etc/hosts to /home/tht/hosts
+/etc/hosts                                                                              100%  276     0.3KB/s   00:00    
+sftp> get /etc/hosts
+Fetching /etc/hosts to hosts
+/etc/hosts                                                                              100%  324     0.3KB/s   00:00    
+sftp> pwd
+Remote working directory: /home/tht
+
+
+批量管理
+实施密钥认证
+1、创建用户
+useradd man01
+echo "123456" | passwd --stdin man01
+id man01
+
+su - man01
+
+
+密钥创建
+ssh-keygen -t dsa 
+[man01@mem01 ~]$ cd ./.ssh
+[man01@mem01 .ssh]$ ls
+id_dsa  id_dsa.pub
+
+无交付式创建密钥对
+ssh-keygen -t dsa -P '' -f ~/.ssh/id_dsa >/dev/null 2>&1
+echo -e "\n" | ssh-keygen -t dsa -N ""
+
+分发公钥
+
+改过端口
+ssh-copy-id -i .ssh/id_dsa.pub "-p 52113 man01@192.168.237.14"
+ssh-copy-id -i .ssh/id_dsa.pub "-p 52113 man01@192.168.237.20"
+
+没有改过端口
+ssh-copy-id -i .ssh/id_dsa.pub man01@192.168.237.20
+
+
+分发后如下：
+[root@nfs01 .ssh]# pwd
+/home/man01/.ssh
+[root@nfs01 .ssh]# ll
+total 4
+-rw------- 1 man01 man01 601 Dec  2 23:16 authorized_keys
+
+测试
+ssh -p52113 man01@192.168.237.14 uname -n
+ssh -p52113 man01@192.168.237.20 uname -n
+
+scp -P52113 ./hosts man01@192.168.237.14:~
+scp -P52113 ./hosts man01@192.168.237.20:~
+
+其他服务器上配置sudo后，执行：
+加-t参数可使用远程sudo。
+ssh -p52113 -t man01@192.168.237.14 sudo cp ~/hosts /etc
+
+也可使用rsync
+rsync -az hosts -e 'ssh -p 52113' man01@192.168.237.14:~
+
+分发脚本一：
+#!/bin/bash
+. /etc/init.d/functions
+ServerList=~/server.conf
+for Ip in `cat $ServerList`
+do
+	rsync -av ~/hosts -e 'ssh -p 52113' man01@${Ip}:~ >/dev/null 2>&1 && \
+	ssh -p52113 man01@${Ip} sudo cp ~/hosts /etc/ >/dev/null 2>&1
+	if [ $? -eq 0 ]
+	then
+	    action "fenfa host $Ip" /bin/true
+	else
+	    action "fenfa host $Ip" /bin/false
+	fi
+done
+
+分发脚本二：
+#!/bin/bash
+if [ $# -ne 2 ];then
+    echo "USAGE:$0 [ARG1 ARG2]"
+	exit 3
+fi
+. /etc/init.d/functions
+ServerList=~/server.conf
+for Ip in `cat $ServerList`
+do
+	rsync -av ~/$1 -e 'ssh -p 52113' man01@${Ip}:~ >/dev/null 2>&1 && \
+	ssh -p52113 man01@${Ip} sudo cp ~/$1 $2 >/dev/null 2>&1
+	if [ $? -eq 0 ]
+	then
+	    action "fenfa host $Ip" /bin/true
+	else
+	    action "fenfa host $Ip" /bin/false
+	fi
+done
+
+
+
+
+
+	ssh -p52113 man01@${Ip} sudo cp /etc/hosts{,.$(date +%F-%H-%M-%S).ori}
+
+
+
+

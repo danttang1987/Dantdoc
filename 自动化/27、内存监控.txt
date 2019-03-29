@@ -1,0 +1,17 @@
+27、内存监控
+
+内存在系统中被分为页，一个页为4KB，按页读取
+
+寻址：
+
+空间：
+
+工具：
+	free:
+	vmstat
+		procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+		r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+		3  0      0 740708   2108 132748    0    0    75     7   68  222  1  2 97  0  0
+		si:数据从交换分区读到内存
+		so:数据从内存读到交换分区
+

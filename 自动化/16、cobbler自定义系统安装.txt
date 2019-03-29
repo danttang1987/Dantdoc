@@ -1,0 +1,36 @@
+cobbler自定义系统安装
+
+1、服务器采购
+2、服务器验收，并设置Raid
+3、服务商提供验收单，运维验收负责人签字
+4、服务器上架
+5、资产录入
+6、开始自动化安装
+	1、将服务器接入装机vlan
+	2、根据资产清单上的mac地址，自定义安装（机房、区域、机柜、服务器位置、服务器网络接入端口、该端口的Mac地址、预分配的IP地址、主机名、子网、网关、角色、操作系统、分区）
+	3、自动化装机平台安装
+	
+
+cobbler system add --name=linux-node3 --mac-address=00:0C:29:D3:34:B0 --profile=centos6-x86_64 --ip-address=192.168.237.152 --subnet=255.255.255.0  --gateway=192.168.237.2  --interface=eth0 --static=1 --hostname=linux-node3 --name-servers=192.168.237.200 --kickstart=
+cobbler system add --name=linux-node3 --mac-address=00:0C:29:D3:34:B0 --profile=centos6-x86_64 
+ cobbler system list
+ 
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

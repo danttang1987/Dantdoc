@@ -1,0 +1,25 @@
+shell-批量修改文件名
+for i in `seq 1 9`;do touch ${i}_finished.jpg;done
+
+[tht@d03 test1]$ ls
+1_finished.jpg  3_finished.jpg  5_finished.jpg  7_finished.jpg  9_finished.jpg
+2_finished.jpg  4_finished.jpg  6_finished.jpg  8_finished.jpg
+
+方法一：sed+for
+for filename in `ls`;do mv $filename `echo $filename |sed -n 's/_finished//p'`;done
+
+[tht@d03 test1]$ ls
+1.jpg  2.jpg  3.jpg  4.jpg  5.jpg  6.jpg  7.jpg  8.jpg  9.jpg
+
+方法二：ls+awk
+ls | awk -F "." '{print "mv",$0,$1"_finished."$2}'|bash
+[tht@d03 test1]$ ls
+1_finished.jpg  3_finished.jpg  5_finished.jpg  7_finished.jpg  9_finished.jpg
+2_finished.jpg  4_finished.jpg  6_finished.jpg  8_finished.jpg
+
+方法三：rename
+rename "_finished" "" *.jpg
+[tht@d03 test1]$ rename "_finished" "" *.jpg
+[tht@d03 test1]$ ls
+1.jpg  2.jpg  3.jpg  4.jpg  5.jpg  6.jpg  7.jpg  8.jpg  9.jpg
+[tht@d03 test1]$ 

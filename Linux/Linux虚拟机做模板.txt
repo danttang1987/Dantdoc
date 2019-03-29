@@ -1,0 +1,13 @@
+1、将IP配置为一个不需要使用的IP。
+2、删除网络配置文件中的uuid和mak地址
+3、清空persistent-net.rules
+>/etc/udev/rules.d/70-persistent-net.rules
+4、关闭iptables
+Centos7：systemctl 
+5、关闭SElinux
+sed -i  '/^SELINUX=/d;/disabled/aSELINUX=disabled' /etc/selinux/config
+
+
+
+
+

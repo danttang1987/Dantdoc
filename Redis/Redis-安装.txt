@@ -1,0 +1,142 @@
+安装
+版本选择2.0.x
+2：主版本
+0：小版本（偶数为稳定版本，奇数为不稳定版本）
+x:
+
+
+sed -i '/HOSTNAME=/d;1aHOSTNAME=redis01' /etc/sysconfig/network
+sed -i '/IPADDR=/d;/NETMASK/iIPADDR=192.168.237.22' /etc/sysconfig/network-scripts/ifcfg-eth0
+echo "192.168.237.10    web01" >> /etc/hosts
+echo "192.168.237.11    web02" >> /etc/hosts
+echo "192.168.237.12    db01" >> /etc/hosts
+echo "192.168.237.13    db02" >> /etc/hosts
+echo "192.168.237.21    db03" >> /etc/hosts
+echo "192.168.237.22    redis01" >> /etc/hosts
+
+
+mkdir /home/tht/tools -p
+cd /home/tht/tools
+wget http://download.redis.io/releases/redis-3.2.10.tar.gz
+tar xf redis-3.2.10.tar.gz
+mkdir /application
+cp -rp redis-3.2.10 /application/
+ln -s redis-3.2.10 redis
+cd /application/redis
+make
+cd src
+make install
+make install是将Redis的命令放到/usr/local/bin下
+
+安装完成
+#########################################################
+
+
+Redis配置、启动、操作、关闭
+命令说明
+redis-server    启动Redis
+redis-cli       Redis命令客户端
+redis-benchmark  Redis基准测试工具
+redis-check-aof  Redis AOF持久化文件检测和修复工具
+redis-check-dump  Redis RDB挺久化文件检测和修复工具
+redis-sentinel    启动Redis Sentinel
+
+
+1、启动
+有三种方法，默认配置、运行配置、配置文件启动
+  1）默认启动
+  redis-server
+  2）运行启动
+  redis-server --configkey1 configvalue1 --configkey2 configvalue2
+  可以跟多个配置名和值，如：
+  redis-server --port 6380
+  3）配置文件启动（建议使用）
+  redis-server /opt/redis/redis.conf
+  
+  redis有60多个配置，下面列出一些重要的配置
+  port         >>端口
+  logfile      >>日志文件位置
+  dir          >>Redis工作目录（持久化文件和日志存储）
+  daemonize    >>以守护进程方式启动
+  
+  以下是默认值的redis.conf文件
+  bind 127.0.0.1
+  protected-mode yes
+  port 6379
+  tcp-backlog 511
+  timeout 0
+  tcp-keepalive 300
+  daemonize no
+  supervised no
+  pidfile /var/run/redis_6379.pid
+  loglevel notice
+  logfile ""
+  databases 16
+  save 900 1
+  save 300 10
+  save 60 10000
+  stop-writes-on-bgsave-error yes
+  rdbcompression yes
+  rdbchecksum yes
+  dbfilename dump.rdb
+  dir ./
+  slave-serve-stale-data yes
+  slave-read-only yes
+  repl-diskless-sync no
+  repl-diskless-sync-delay 5
+  repl-disable-tcp-nodelay no
+  slave-priority 100
+  appendonly no
+  appendfilename "appendonly.aof"
+  appendfsync everysec
+  no-appendfsync-on-rewrite no
+  auto-aof-rewrite-percentage 100
+  auto-aof-rewrite-min-size 64mb
+  aof-load-truncated yes
+  lua-time-limit 5000
+  slowlog-log-slower-than 10000
+  slowlog-max-len 128
+  latency-monitor-threshold 0
+  notify-keyspace-events ""
+  hash-max-ziplist-entries 512
+  hash-max-ziplist-value 64
+  list-max-ziplist-size -2
+  list-compress-depth 0
+  set-max-intset-entries 512
+  zset-max-ziplist-entries 128
+  zset-max-ziplist-value 64
+  hll-sparse-max-bytes 3000
+  activerehashing yes
+  client-output-buffer-limit normal 0 0 0
+  client-output-buffer-limit slave 256mb 64mb 60
+  client-output-buffer-limit pubsub 32mb 8mb 60
+  hz 10
+  aof-rewrite-incremental-fsync yes
+
+
+2、客户端命令
+  1）交互式命令
+  redis-cli -h {host} -p {port}
+  如：
+  redis-cli -h 127.0.0.1 -p 6380
+  
+  2）命令式
+  redis-cli -h {host} -p {port} {command}
+  如：
+  redis-cli -h 127.0.0.1 -p 6380 get tht
+
+3、停止服务
+redis-cli -h {host} -p {prot} shutdown
+停止服务需要注意以下三点：
+  1）、redis关闭的过程：断开与客户端的连接、持久化文件生成，是一种相对优雅的关闭方式
+  2）、除了shutdown以外还可以通过Kill进程号的方式关闭，但不能用kill -9强制杀死方式，不会持久化文件
+  3）、shutdown还有一个参数，代表关闭前是否需要持久化（redis-cli shutdown nosave|save）
+
+完成Redis的启动配置关闭
+#############################################
+
+
+Redis重大版本
+
+
+

@@ -1,0 +1,4 @@
+保持脚本一直在后台运行
+nohup /bin/sh /root/rebootdvs.sh &
+ 或
+setsid  /bin/sh /root/rebootdvs.sh &

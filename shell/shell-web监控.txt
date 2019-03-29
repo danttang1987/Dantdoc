@@ -1,0 +1,19 @@
+web服务器监控
+wget --spider --timeout=10 --tries=2 www.baidu.com &> /dev/null; echo $?
+wget -T 10 -p --spider http://www.baidu.com >&/dev/null;echo $?
+
+-T和--timeout表示超时
+--tries表示重试次数
+--spider表示模拟爬取
+
+
+
+curl -s -o /dev/null http://www.baidu.com;echo $?
+-s表示静默模式
+-o 表示输出重定向
+
+[[ `curl -I -s -w "%{http_code}\n" -o /dev/null http://www.baidu.com` =~ [23]0[012] ]]
+
+
+[ `curl -I http://www.baidu.com 2>/dev/null |head -1| egrep "200|302|301"|wc -l` -eq 1 ]
+

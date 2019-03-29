@@ -1,0 +1,145 @@
+Redis-开发运维注意
+一、Linux配置优化要点
+	1、内存分配控制
+		1；vm.overcommit_memory
+			一般建议将这个参数设置为1
+			如果设置为0当在执行bgsave和bgrewriteaof时如果可用内存不足时，就会申请内存失败，对应的fork失败，将出现如下报错日志
+			”cannot allocate memory“
+			获取方法：
+			cat /proc/sys/vm/overcommit_memory
+			
+			设置方法：
+			echo "vm.overcommit_memory=1" >> /etc/sysctl.conf
+			sysctl -p
+			
+			最佳实践：
+			设置合理的maxmemory,保证机器有20%-30%的闲置内存
+			集中化管理AOF重写的RDB的bgsave
+			设置vm.overcommit_memory=1
+		2;swappiness
+			swappiness会决定操作系统使用swap的倾向程度。
+			swappiness取值为0-100，值越大说明系统可能使用Swap的概率越高。
+			值越低表示更加倾向于使用物理内存。
+			
+			0：Linux3.5及以上：宁愿用OOM Killer也不用Swap; Linux3.4及更早：宁愿用Swap ，也不用OOM Killer
+			1：Linux3.5及以上：宁愿用Swap ，也不用OOM Killer
+			60:默认值
+			100：操作系统会主动使用swap
+			
+			配置：
+			Linux>=3.5：
+			echo "vm.swappiness=1" >>/etc/sysctl.conf
+			sysctl -p
+			Linux小于3.5
+			echo "vm.swappiness=0" >>/etc/sysctl.conf
+			sysctl -p
+			
+			如配置有高用，可都配置为0；（死掉比阻塞更好）
+			
+			监控swap:
+			vmstat 1   每一秒输出操作系统状态，可查看swap的si和so参数的值，如果都是0代表当前没有使用swap
+			
+			查看指定进行的Swap使用情况
+			cat /proc/{PID}/smaps | grep -i swap
+			
+			
+		3；THP
+			建议禁用THP
+			echo "never" >/etc/kernel/mm/transparent_hugepage/enabled
+			echo "echo 'never' >/etc/kernel/mm/transparent_hugepage/enabled">>/etc/rc.local
+			
+			
+			echo "never" >/etc/kernel/mm/redhat_transparent_hugepage/enabled
+			echo "echo 'never' >/etc/kernel/mm/redhat_transparent_hugepage/enabled">>/etc/rc.local
+			
+		4;OOM killer
+			OOM Killer会在可用内存不足时选择性地杀掉用户进程
+			每个进行有一个权值，该值越高就越容易被杀掉，反之
+			这个权值存放在/proc/{progress_id}/oom_score中，这个值受/proc/{progress_id}/oom_adj的控制
+			OOM_adj在不同的Linux配置中最小值不同，可以参考Linux原码中oom.h（一般为-15到-17）
+			配置方法：
+			for redis_pid in $(pgrep -f "redis-server")
+			do
+				echo -17 > /proc/${redis_pid}/oomadj
+			done
+			
+			
+		5;NTP
+			0 * * * * /usr/sbin/ntpdate ntp.xx.com >/dev/null 2>&1
+			
+		6;ulimit
+			通过ulimit查看系统对用户进程的资源限制
+			ulimit -a
+			
+			ulimit -Sn 65535
+		7;tcp backlog
+			redis 默认的tpc-backlog值为511，可通过修改tcp-backlog进行调整，如果Linux小于Redis设置的tcp-backlog，启动时就会有警告日志。
+			
+			cat /proc/sys/net/core/somaxconn
+			
+			echo net.core.somaxconn=1024 >>/etc/sysctl.conf
+			sysctl -p
+			
+						
+
+二、flushall/flushdb误操作快速恢复方法
+	Aof做为数据源进行恢复
+	1、防止Aof重写设置redis主从的auto-aof-rewrite-percentage和auto-aof-rewrite-min-size为一个很大的值，从而防止AOF重写
+	config set auto-aof-rewrite-percentage 1000
+	config set auto-aof-rewrite-min-size 1000000000
+	
+	2、去掉主从AOF文件中的flush相关内容
+	
+	重启Redis主从节点，恢复数据
+	
+	
+
+
+
+三、安全的Redis设计
+	1、Redis密码机制
+		启动Redis时使用--requirepass设置密码
+		redis-server --requirepass hello_redis_devops
+		
+		在客户端登录时可以酸胀-a 参数
+		
+		redis-cli -a hello_redis_devops
+		
+		密码建议：64字节以上，如是主从结构的Redis需要在配置中加masterauth hello_redis_devops 配置
+		
+		
+	2、伪装危险命令
+		使用rename-command参数配置，不支持config set命令配置、在做rdb或aof之前配置、主从保持一至。
+		危险命令如下：
+		keys:
+		flushall/flushdb:
+		save:
+		debug:
+		config:
+		shutdown:
+		
+	3、bind
+		bind配置用于绑定指定的网卡。
+		
+	4、定期备份
+	
+	5、不使用默认端口
+	
+	6、使用非root用户启动
+	
+		
+		
+		
+	
+四、处理bigkey的方案与最佳实践
+	1、如何发现bigkey
+		可通过redis-cli --bigkeys命令统计bigkey的分布
+		判断一个key是否为bigkey，可使用debug object key来判断一个key是否为bigkey。
+		
+	2、删除bigkey
+	string删除用del key
+		
+
+五、寻找热点Key
+
+

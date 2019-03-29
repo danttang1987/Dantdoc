@@ -1,0 +1,2 @@
+Nginx设置Tcp Keepalive通过设置
+sokeepalive=60s #有三个参数可以设置on/off/*s

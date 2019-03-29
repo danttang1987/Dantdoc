@@ -1,0 +1,58 @@
+shell-vim常用功能
+
+G
+1G或gg
+0
+$
+n<enter>
+ngg
+H
+M
+L
+h
+j
+k
+l
+
+
+
+/zishan
+?zishan
+n 
+N
+:g/A/s/B/g
+:%s/A/B/g
+:n1,n2s/A/B/gc
+
+Yy
+nyy
+p/P
+D
+dd
+ndd
+u
+.
+
+i
+a
+I
+A
+O
+o
+esc
+
+:wq
+:wq!
+:q!
+:n1,n2 w filename
+:n1,n2 co n3
+:n1,n2 m n3
+:!command
+
+
+:set nu
+:set nonu
+:vs filename
+:sp filename
+
+

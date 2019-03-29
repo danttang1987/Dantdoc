@@ -1,0 +1,10 @@
+sed -i '/HOSTNAME=/d;1aHOSTNAME=man01' /etc/sysconfig/network
+sed -i '/IPADDR=/d;/NETMASK/iIPADDR=192.168.237.19' /etc/sysconfig/network-scripts/ifcfg-eth0
+echo "192.168.237.10    web01" >> /etc/hosts
+echo "192.168.237.11    web02" >> /etc/hosts
+echo "192.168.237.15    lb01" >> /etc/hosts
+echo "192.168.237.16    lb02" >> /etc/hosts
+echo "192.168.237.18    mem01" >> /etc/hosts
+echo "192.168.237.19    man01" >> /etc/hosts
+
+#Nagios监控

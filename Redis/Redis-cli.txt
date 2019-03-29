@@ -1,0 +1,68 @@
+Redis shell
+1、redis-cli详解
+
+-r n  将命令执行多次
+[root@redis01 ~]# redis-cli -p 6380 -r 3 ping
+PONG
+PONG
+PONG
+
+-i n  每次命令间隔几秒（如想10毫秒执行一次可-i 0.01）
+[root@redis01 ~]# redis-cli -p 6380 -i 2 -r 3 ping
+PONG
+PONG
+PONG
+
+输出内存使用情况
+[root@redis01 ~]# redis-cli -p 6380 -i 0.01 -r 10 info | grep used_memory_human
+used_memory_human:804.70K
+used_memory_human:804.80K
+used_memory_human:804.89K
+used_memory_human:804.98K
+used_memory_human:805.08K
+used_memory_human:805.17K
+used_memory_human:805.27K
+used_memory_human:805.36K
+used_memory_human:805.45K
+used_memory_human:805.55K
+
+-x  从标准输入读取数据做为最后一个参数
+[root@redis01 ~]# echo "tang" | redis-cli -p 6380 -x set key1
+OK
+
+
+-c 连接Cluster时使用
+
+-a 如果Redis配置了密码，可以使用 -a 不需要手动输入auth命令；
+
+--scan和--pattern 用于扫描时指定指定扫描的模式
+
+--slave  把客户端模拟成当前Redis节点的从节点。
+
+--rdb  选项会请求Redis实例生成并发送RDB持久化文件；可做定期备份
+
+--pipe  用于将命令封装成Redis通信协议定义的数据模式，批量发送给Redis执行；
+echo -en '*3\r\n$3\r\nset\r\n$5\r\nhello\r\n$5\r\nnword\r\n*2\r\n$4\r\nincr\r\n$7\r\ncounter\r\n' | redis-cli -p 6380 --pipe
+
+--bigkeys   使用scan命令对redis的键进行采样，从中找到内存占用比较大的键值
+
+--eval  选项用于执行指定的lua脚本
+
+--latency
+--latency-history    可分时间断 -i 设置间隔
+--latency-dist
+以上三个用于检测网线延迟
+
+
+--stat   选项可以实时获取Redis的重要统计信息
+###------- data ------ --------------------- load -------------------- - child -
+###keys       mem      clients blocked requests            connections          
+###17         807.28K  1       0       6618 (+0)           57          
+###17         807.38K  1       0       6619 (+1)           57          
+###17         807.47K  1       0       6620 (+1)           57          
+###17         807.56K  1       0       6621 (+1)           57          
+###17         807.66K  1       0       6622 (+1)           57          
+
+--raw和--no-raw
+--no-raw  要求命令的返回结果为原始格式
+--raw  返回格式化后的结果

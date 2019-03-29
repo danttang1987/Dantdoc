@@ -1,0 +1,162 @@
+#一.
+key_buffer_size:不会立即分配空间，在需要使用时由系统分配
+table_cache_size:设置不会立即生效，会延迟到下一次有线程打开表时生效。
+thread_cache_size:设置不会立即生效，在下一次有连接关闭时生效
+query_cache_size:Mysql启动时一次性分配，并初始化这块内存
+read_buffer_size:Mysql只会在有查询需要时才会为该缓存分配内存，并且会一次性分配参数指定大小的全部内存
+read_rnd_buffer_size:会在有查询需要时才会为该缓存分配内存，并且只会分配需要的内存大小；
+sort_buffer_size:只会在有查询需要做排序时需要为该缓存分配内存，并且会一次性分配参数指定大小的全部内存
+
+#注，有些内存分配尽量小一些，如需要更大的内存空间可以在连接中把它设置大点。
+
+
+问题一：将sort_buffer_size设置过大，导致服务器尝试分配太多的内存而崩溃。
+
+
+#mysql变量的值不是越大就越好，设置太大可能导致问题，
+
+#建议将配置文件做好注释，并做好版本控制；
+show global status;
+show global variables;
+
+InnoDB参数配置
+重要的两个参数是必须的
+buffer_pool    设置为内存的75%-80%（一般来说，服务器的总内存减去系统需要内存、mysql自身需要的内存、日志、查询需要的内存在除以105%）
+Log file
+open_files_limit  这个设置尽可能大，65535
+
+
+Mysql内存配置
+
+1、Mysql可以使用多少内存（可能受物理内存、操作系统、glibc库、版本等限制）
+2、每个连接需要的内存（一般不需要考虑最坏的情况，可监控系统top中的virt或ps中的vsz）
+3、为操作系统保留内存（一般1-2GB）
+4、为缓存分配内存（将不需使用的内存都分配给缓存）
+InnoDB缓冲池
+InnoDB日志文件和MyISAM数据操作系统缓存
+MyISAM键缓存
+查询缓存
+无法手工配置的缓存，如二进制日志和表定义文件的操作系统缓存
+
+5、InnoDB缓冲池（Buffer Pool）
+可通过show innodb status来查看InnoDB的buffer使用情况；
+mysql -uroot -pasdf131 -e "show global status;"| grep -i InnoDB
+如果分配过大的Buffer,在关闭Mysql时可能需要更多的时间，或者在启动时需要更多的时间；
+此问题主要是由于脏页数量太多原因，可通过Innodb_buffer_pool_pages_dirty状态查看脏页数量；
+如想快速关闭mysql可提前将innodb_max_dirty_pages_pct改小；
+set global innodb_max_dirty_pages_pct = 20;
+
+
+6、MyISAM键缓存（key cache）,用于缓存MyISAM的索引。该值需要了解索引占空间的大小。
+select sum(index_length) from information_schema.tables where engine='myisam';
+或
+du -sch `find /appliction/mysql/data/ -name *.MYI`
+通过key_reads查看未命中情况除以uptime,了解性能情况
+key_reads/uptime
+mysql -uroot -pasdf131 -e "show global status;"| grep -i key_reads
+mysql -uroot -pasdf131 -e "show global status;"| grep -i uptime
+
+可通过每隔10秒还查看未命中增量值；
+mysqladmin -uroot -pasdf131 extended -r -i 10 | grep -i key_reads
+
+Mysql键缓存块大小，也很重要，如果太小可以会碰到写时读取（read-around write）
+可通过myisam_block_size设置索引块大小
+查看block_size
+mysql -uroot -pasdf131 -e "show global variables;"| grep -i block_size
+
+7、线程缓存（一般不需配置这个，除非服务器有很多连接）
+查看thread_cache_size配置
+mysql -uroot -pasdf131 -e "show global variables;"| grep -i thread_cache
+
+通常查看threads_created数量来确认是否需要增加thread_cache_size大小。
+mysql -uroot -pasdf131 -e "show global status;"| grep -i threads_created
+mysqladmin -uroot -pasdf131 extended -r -i 10 | grep -i threads_created
+如果Threads_connected保持在100-200之间，则可以设置缓存大小为20；保持在500-700之间，则可以设置缓存大小为200
+
+8、表缓存（table Cache）
+
+9、InnoDB数据字典缓存
+将innodb_open_files设置足够大，
+mysql -uroot -pasdf131 -e "show global variables;"| grep -i innodb_open_files
+
+
+配置Mysql 的I/0行为
+1、InnoDB I/O配置（InnoDB日志文件大小、InnoDB怎样刷新它的日志缓冲，以及InnoDB怎样执行I/O）
+InnoDB事务日志（减小提交事务时的开销，将随机的I/O转换为顺序I/O）
+innodb_log_file_size
+innodb_log_files_in_group
+该值默认为2个5M的文件，在高并发的环境中这个太小，可能需要增加到几百兆或几个GB
+[root@db01 ~]# mysql -uroot -pasdf131 -e "show global variables;"| grep -i innodb_log_file
+innodb_log_file_size    5242880
+innodb_log_files_in_group       2
+
+注：在修改这个值的时候需要关闭Mysql,并将原有的日志文件迁移到其他位置备份，确保Mysql启动成功后，并查看日志文件没有报错才可删除。
+
+日志缓冲区
+innoDB_log_buffer_size
+该值默认为1MB，如有大事务需要增这个值；
+[root@db01 ~]# mysql -uroot -pasdf131 -e "show global variables;"| grep -i innodb_log_buffer
+innodb_log_buffer_size  8388608
+
+可通过检查innodb_os_log_written状态来查看Innodb对日志文件写出了多少数据。
+[root@db01 ~]# mysql -uroot -pasdf131 -e "show status;" | grep -i innodb_os_log
+Innodb_os_log_fsyncs    4
+Innodb_os_log_pending_fsyncs    0
+Innodb_os_log_pending_writes    0
+Innodb_os_log_written   512
+mysqladmin -uroot -pasdf131 extended -r -i 10 | grep -i Innodb_os_log_written
+
+日志刷新到磁盘的策略控制
+innodb_flush_log_at_trx_commit
+
+[root@db01 ~]# mysql -uroot -pasdf131 -e "show global variables;"| grep -i innodb_flush_log_at_trx_commit
+innodb_flush_log_at_trx_commit  1
+该参数有三个值
+0   每一秒刷新一次    （Mysql进程挂了可能丢失数据）
+1    每次提交刷新一次  （最安全）
+2    每次提交都刷新，最后由系统写回磁盘    （服务器断电可能丢失数据）
+
+InnoDB怎样打开和刷新日志以及数据文件
+Innodb_fush_method
+mysql -uroot -pasdf131 -e "show global variables;"| grep -i innodb_flush_method
+
+该参数的值：
+fdatasync   InnoDB会调用fsync()来刷新数据和日志文件，fdatasync()和fsync()相似，但只刷新数据，不包括元数据（如修改时间、等），因此fsync()会导致更多的I/O;fdatasync()可能会导致数据损坏；
+O_DIRECT    也是用fsync()来刷新，但他不使用系统缓存，所有读写直接通过设备；（使用这个设置通常需要带写缓存的RAID卡，如果没有，将导致严重的性能问题）
+ALL_O_DIRECT
+O_DSYNC    这个选项调用open()函数，只有数据写到磁盘才会返回。
+
+
+Innodb表空间（存储表、索引、回滚日志、插入缓冲、双写缓冲、数据结构）
+配置Innodb表空间通过Innodb_data_file_path和Innodb_data_home_dir
+[root@db01 ~]# mysql -uroot -pasdf131 -e "show global variables;"| grep -i innodb_data
+innodb_data_file_path   ibdata1:10M:autoextend
+innodb_data_home_dir
+
+表空间配置建议，
+1、建议禁用自动增长，（表空间不好回收，回收方法导出数据，关闭数据清理文件，重新配置数据库，导入数据）
+2、可使用inn_file_per_table参数为每个表创建一个文件。
+
+
+其他I/O配置
+sync_binlog
+0  默认值（由系统来刷新）
+1  间隔多少次二进制日志写操作（如设置autocommit）每个独立的语句都是一次写操作；
+如果使用expire_logs_days参数清理二进制日志就不要用rm去清理。
+
+
+
+MyISAM的I/O配置
+
+delay_key_write
+OFF   每次写操作都需要刷新
+ON    只对使用DELAY_KEY_WRITE选项创建的表有效
+ALL    对所有表都有效
+
+
+配置禁用DNS解析
+
+skip_name_resolve On
+
+禁用自动提交
+autocommit off

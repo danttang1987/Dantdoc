@@ -1,0 +1,234 @@
+Heartbeat
+
+与keepalived有很多相同之处
+
+可以将一台服务器的资源（IP,程序）转移到另一台服务上；
+
+www.linuxha.org
+
+heartbeat和keepalived都是服务级的高可用
+切换条件：
+1、服务器故障
+2、heartbeat服务问题
+3、心跳线出问题
+
+服务故障不会进行切换，可以通过一些方式在服务宕机后将heartbeat停了
+
+
+HeartBeat心跳线
+1、串行电缆  （首先）
+2、一根以态网线连接两台服务器网卡；（建议）
+3、以太网电缆，通过交换机等网络设备进行连接；（次选）
+
+
+导致裂脑的多原因
+1、心跳线链路故障（心跳线坏了、网卡及驱动、IP配置及冲突、心跳线设备故障、仲裁的设备出问题）
+2、防火墙阻挡了心跳消息
+3、心跳网卡IP配置不正常
+4、软件Bug,心跳广播冲突
+
+防止裂脑发生
+1、同时使用多种方式做心跳线
+2、当检测到裂脑时强行关闭一个心跳节点（需要特殊设备，如：fence）
+3、做好监控，及告警（如邮件、短信），由人参与切换；
+4、启用磁盘锁（在使用共享磁盘）
+5、增加仲裁机制
+
+Heartbeat消息类型
+
+
+1、心跳消息：150字节的数据包（单播、组播、多播）
+
+2、群集转换消息（ip-request、ip-request-resp）
+
+3、重传请求（重传心跳请求）
+
+
+Heartbeat IP地址接管和故障转移
+
+通过IP地址接管和ARP广播进行故障转移
+
+
+
+
+别名和辅助IP
+
+真实IP,管理IP,在互联网负载均衡中管理IP不对外提供服务；
+
+别名IP(Heartbeat 2采用)
+ifconfig eth0:0 192.168.235.31/24
+删除
+ifconfig eth0:0 192.168.235.31/24 down
+
+辅助IP(Heartbeat 3、Keepalive采用)
+ip addr add 192.168.236.31/24 broadcast 192.168.236.255 dev eth0
+删除
+ip addr del 192.168.236.31/24 broadcast 192.168.236.255 dev eth0
+
+
+HeartBeat脚本默认目录
+启动脚本：/etc/init.d
+资源目录：/etc/ha.d/resource.d/（如需要自己写脚本，要放在该目录下）
+
+
+HeartBeat配置文件(常用有三个)
+/etc/ha.d
+ha.cf：基本配置参数
+authkey：认证文件
+haresource：资源配置文件
+
+
+
+搭建Heartbeat,实现VIP切换
+
+配置两台服务器，每台服务器需要两个网卡（一个管理和业务，一个心跳）
+
+配置主机名和hosts
+
+配置主机路由
+在10.10.10.31上
+/sbin/route add -host 10.10.10.32 dev eth1
+
+在10.10.10.32上
+/sbin/route add -host 10.10.10.31 dev eth1
+
+
+安装heartbeat，需要安装epel源（注：如5.8需要安装yum两次）
+
+yum install heartbeat -y
+
+
+[root@d01 ~]# ll /etc/ha.d/
+total 20
+-rwxr-xr-x 1 root root  745 Dec  3  2013 harc
+drwxr-xr-x 2 root root 4096 Jan  8 23:01 rc.d
+-rw-r--r-- 1 root root  692 Dec  3  2013 README.config
+drwxr-xr-x 2 root root 4096 Jan  8 23:01 resource.d
+-rw-r--r-- 1 root root 2082 Mar 24  2017 shellfuncs
+[root@d01 ~]# ll /usr/share/doc/heartbeat-3.0.4/
+total 144
+-rw-r--r-- 1 root root  1873 Dec  3  2013 apphbd.cf
+-rw-r--r-- 1 root root   645 Dec  3  2013 authkeys
+-rw-r--r-- 1 root root  3701 Dec  3  2013 AUTHORS
+-rw-r--r-- 1 root root 58752 Dec  3  2013 ChangeLog
+-rw-r--r-- 1 root root 17989 Dec  3  2013 COPYING
+-rw-r--r-- 1 root root 26532 Dec  3  2013 COPYING.LGPL
+-rw-r--r-- 1 root root 10502 Dec  3  2013 ha.cf
+-rw-r--r-- 1 root root  5905 Dec  3  2013 haresources
+-rw-r--r-- 1 root root  2935 Dec  3  2013 README
+
+ha.cf配置文件
+debugfile /var/log/ha-debug
+logfile /var/log/ha-log
+logfacility     local0
+keepalive 2
+deadtime 30
+warntime 10
+initdead 60
+mcast eth1 225.0.0.1 694 1 0
+auto_failback on
+node    d01
+node    d02
+crm     no
+
+
+
+authkeys配置文件
+auth 1
+1 sha1 HI!
+
+
+
+haresources配置文件中重要配置
+node-name resource1 resource2 ... resourceN
+IPaddr::135.9.8.7/24/eth0
+
+脚本::VIP/掩码/设备
+
+以上配置最终执行如下脚本
+/etc/ha.d/resource.d/IPaddr 135.9.8.7/24/eth0 stop/start
+
+
+
+启动Heartbeat
+/etc/init.d/heartbeat start
+
+#注：在生产环境中需要将heartbeat开机启动关闭
+chkconfig heartbeat off
+chkconfig --list | grep heartbeat
+
+
+
+heartbeat与Keepalive的区别
+1、对于一般的web、db、负载均衡（nginx\haproxy）等等，Heartbeat和keepalive都可以实现
+2、lvs负载均衡最好与keepalive结合
+3、需要数据同步（配合DrDB）的高可用业务最好用heartbeat
+
+Heartbeat维护
+
+Heartbeat常用命令：
+
+cl_status：查看heartbeat运行状态
+	使用格式：
+	cl_status sub-command options parameters
+	
+	SUPPORTED SUB-COMMANDS
+       hbstatus
+           Indicate if heartbeat is running on the local system.
+
+       listnodes
+           List the nodes in the cluster.
+
+       nodetype ping|normal
+           List the nodes of the given type.
+               Note
+               Ping nodes are obsolete in Pacemaker cluster, having been replaced with the pingd resource agent.
+
+       listhblinks node
+           List the network interfaces used as heartbeat links.  node should be specified as listed
+           in the ha.cf(5) file for the cluster.
+
+       hblinkstatus node link
+           Show the status of a heartbeat link.  node should be specified as listed in the ha.cf(5)
+           file for the cluster.  link should be as per the output of the listhblinks subcommand.
+
+       clientstatus node client [timeout]
+           Show the status of heartbeat clients.  node and client should be specified as listed in
+           the ha.cf(5) file for the cluster. Timeout is in milliseconds, the default is 100ms.
+
+       rscstatus
+           Show the status of cluster resources. Status will be one of: local, foreign, all or
+           none.
+
+               Note
+               This option is deprecated, it is obsolete in Pacemaker clusters.
+
+       parameter -p parameter
+           Retrieve the value of cluster parameters. The parameters may be one of the following:
+           apiauth, auto_failback, baud, debug, debugfile, deadping, deadtime, hbversion, hopfudge,
+           initdead, keepalive, logfacility, logfile, msgfmt, nice_failback, node, normalpoll,
+           stonith, udpport, warntime, watchdog.
+
+               Note
+               Some of these options are deprecated; see ha.cf(5)
+
+
+	OPTIONS
+       The following options are supported by heartbeat:
+
+       -m
+           Make the output more human readable. The default output should be easier for scripts to
+           parse. Available with all commands.
+
+       -p
+           List only ´ping´ nodes. Available with listnodes sub-command.
+
+       -n
+           List only ´normal´ nodes. Available with listnodes sub-command.
+
+
+
+
+
+
+

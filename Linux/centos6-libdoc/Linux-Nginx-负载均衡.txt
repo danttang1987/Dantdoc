@@ -1,0 +1,299 @@
+sed -i '/HOSTNAME=/d;1aHOSTNAME=lb01' /etc/sysconfig/network
+sed -i '/IPADDR=/d;/NETMASK/iIPADDR=192.168.237.15' /etc/sysconfig/network-scripts/ifcfg-eth0
+echo "192.168.237.10    web01" >> /etc/hosts
+echo "192.168.237.11    web02" >> /etc/hosts
+echo "192.168.237.15    lb01" >> /etc/hosts
+yum install pcre pcre-devel openssl-devel -y
+useradd www -u 501 -s /sbin/nologin -M
+mkdir /home/tht/tools -p
+cd /home/tht/tools
+wget http://nginx.org/download/nginx-1.14.0.tar.gz
+tar xf nginx-1.14.0.tar.gz
+cd nginx-1.14.0
+./configure --user=www --group=www --prefix=/appliction/nginx-1.14.0/ --with-http_ssl_module  --with-http_stub_status_module
+make
+make install
+ln -s /appliction/nginx-1.14.0/ /appliction/nginx
+cd /appliction/nginx/conf
+cp nginx.conf{,.ori}
+cat nginx.conf.ori | egrep -v "#|^$" >nginx.conf
+/appliction/nginx/sbin/nginx -t
+/appliction/nginx/sbin/nginx
+netstat -lntup | grep 80
+lsof -i :80
+/appliction/nginx/sbin/nginx -V
+
+
+
+#配置一个简单的负载均衡
+
+worker_processes  1;
+events {
+    worker_connections  1024;
+}
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    sendfile        on;
+    keepalive_timeout  65;
+    upstream www_server_pools {
+        server 192.168.237.10 weight=1;
+        server 192.168.237.11 weight=1;
+        }
+    server {
+        listen       80;
+        server_name  www.tang.com;
+        location / {
+        proxy_pass http://www_server_pools;
+        }
+        error_page   500 502 503 504  /50x.html;
+    }   
+}
+
+/appliction/nginx/sbin/nginx -t
+/appliction/nginx/sbin/nginx -s reload
+
+
+#比较完整的配置
+    upstream www_server_pools {
+        server 192.168.237.10 weight=1 max_fails=1 fail_timeout=10s;
+        server 192.168.237.11 weight=1 max_fails=1 fail_timeout=10s;
+		server backup1.example.com:8080 backup;
+        }
+
+#参数说明
+#weiht=1  >>表示权重
+#max_fails=1  >>Nginx尝试连接后端主机失败的次数
+#backup   >>热备服务器节点
+#fail_timeout  >>失败后下一次检查的时间
+#down    >>标志服务器永久关闭
+
+#以下是Haproxy负载均衡Server标签配置参数
+
+server php_server_1 10.10.1.11:80 cookie 1 check inter 2000 rise 3 fall 2 weight 2
+server php_server_2 10.10.1.11:80 cookie 2 check inter 2000 rise 3 fall 2 weight 2
+
+check       >>开启健康检查
+inter       >>连续两次健康检查的时间
+rise        >>指定多少次连接成功的健康检查后，可认定该服务器处于正常状态
+fall        >>指定多少次连接不成功的健康检查后，可认定该服务器处于宕机状态
+weight      >>
+maxcomm     >>指定最大连接数
+
+
+#nginx的调度算法，有两种，一种为静态，一种为动态
+rr、wrr、ip_hash等都属于静态调度算法
+rr            》》轮询
+wrr           》》权重轮询
+ip_hash       》》按客户端的IP进行分配服务器，只要ip相同就分配到同一个服务器
+
+fair     》》根据服务器响应时间平分配请求，响应时间短的优先分配，Nginx本身不支持需要下载upstream_fair模块；
+least_conn  》》最小连接数
+url_hash   》》将相同的URL分配到同一服务器，提高服务器缓存的命中率，Nginx本身不支持需要下载hash模块；
+#使用方法
+    upstream www_server_pools {
+        hash $request_uri;
+        hash_method crc32;
+        server 192.168.237.10 weight=1 max_fails=1 fail_timeout=10s;
+        server 192.168.237.11 weight=1 max_fails=1 fail_timeout=10s;
+		server backup1.example.com:8080 backup;
+        }
+一致性hash算法     》》一般用于后端业务为缓存服务如：squid、memcached，Nginx本身不支持，但是Nginx分支Tengine支持；
+    upstream www_server_pools {
+        consistent_hash $request_uri;
+        server 192.168.237.10 weight=1 max_fails=1 fail_timeout=10s;
+        server 192.168.237.11 weight=1 max_fails=1 fail_timeout=10s;
+		server backup1.example.com:8080 backup;
+        }
+
+#http proxy模块参数
+proxy_set_header              》》将http请求头传给后台服务器
+client_body_buffer_size       》》指定请求主体缓冲区大小
+proxy_connect_timeout          》》与后端服务器连接超时时间
+proxy_sed_timeout            >>表示代理后端服务器的数据回传时间，即在规定时间内后端服务器必须传完所有数据，否则Nginx就断开连接
+proxy_read_timeout           >>设置Nginx从代理后端服务器获取信息的时间，表示连接建立成功后Nginx等待后端服务器的响应
+proxy_buffer_size            >>设置缓冲区的大小
+proxy_buffers                >>设置缓冲区的数量和大小
+proxy_busy_buffers_size      >>用于设置系统很忙时缓冲区的大小，一般proxy_buffers*2
+proxy_temp_file_write_size   >>指定proxy缓存临时文件的大小
+
+
+#实际应用
+#1、使用proxy_set_header Host $host;将用户访问的host带给后台服务器;
+worker_processes  1;
+events {
+    worker_connections  1024;
+}
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    sendfile        on;
+    keepalive_timeout  65;
+    upstream www_server_pools {
+        server 192.168.237.10 weight=1;
+        server 192.168.237.11 weight=1;
+        }
+    server {
+        listen       80;
+        server_name  www.tang.com;
+        location / {
+        proxy_pass http://www_server_pools;
+		proxy_set_header Host $host;
+        }
+        error_page   500 502 503 504  /50x.html;
+    }   
+}
+#2、使用proxy_set_header X-Forwarded-For $remote_addr;将用户访问的host带给后台服务器;
+    server {
+        listen       80;
+        server_name  www.tang.com;
+        location / {
+        proxy_pass http://www_server_pools;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        }
+        error_page   500 502 503 504  /50x.html;
+    }
+#将proxy参数配置在单独的文件中，并在location中include proxy.conf
+
+cat >/appliction/nginx/conf/proxy.conf <<EOF
+proxy_set_header Host $host;
+proxy_set_header X-Forwarded-For $remote_addr;
+client_body_buffer_size 64k; 
+proxy_connect_timeout 60;     
+proxy_send_timeout 60; 
+proxy_read_timeout 60;     
+proxy_buffer_size 32k;    
+proxy_buffers 4 32k;      
+proxy_busy_buffers_size 64k;
+proxy_temp_file_write_size 64k;
+EOF
+
+
+#在生产环境中我们常常将动态、静态、上传业务分开；
+
+    upstream www_static_pools {
+        server 192.168.237.10 weight=1 max_fails=1 fail_timeout=10s;
+        server 192.168.237.11 weight=1 max_fails=1 fail_timeout=10s;
+        }
+		
+    upstream www_update_pools {
+        server 192.168.237.20 weight=1 max_fails=1 fail_timeout=10s;
+        server 192.168.237.21 weight=1 max_fails=1 fail_timeout=10s;
+        }
+		
+    upstream www_default_pools {
+        server 192.168.237.30 weight=1 max_fails=1 fail_timeout=10s;
+        server 192.168.237.31 weight=1 max_fails=1 fail_timeout=10s;
+        }
+
+
+#方案一、
+        location /static/ {
+        proxy_pass http://www_static_pools;
+        include proxy.conf;
+        }
+		location /update/ {
+        proxy_pass http://www_update_pools;
+        include proxy.conf;
+        }
+		location / {
+        proxy_pass http://www_default_pools;
+        include proxy.conf;
+        }
+
+
+#方案二、
+        if ($request_uri ~* "^/static/(.*)$") {
+        proxy_pass http://www_static_pools;
+        include proxy.conf;
+        }
+		if ($request_uri ~* "^/update/(.*)$") {
+        proxy_pass http://www_update_pools;
+        include proxy.conf;
+        }
+		location / {
+        proxy_pass http://www_default_pools;
+        include proxy.conf;
+        }
+#除了查看url进行代理，还可以根据http_user_agent
+location / {       
+	   if ($http_user_agnet ~* "android") {
+        proxy_pass http://www_static_pools;
+        include proxy.conf;
+        }
+		if ($http_user_agnet ~* "iphone") {
+        proxy_pass http://www_update_pools;
+        include proxy.conf;
+        }
+        proxy_pass http://www_default_pools;
+        include proxy.conf;
+        }
+#或通过扩展名
+        if ($request_uri ~* ".*\.(php|php5)$") {
+        proxy_pass http://www_static_pools;
+        include proxy.conf;
+        }
+		if ($request_uri ~* ".*\.(jpg|gif|png|jpeg|bmp|swf|css|js)$") {
+        proxy_pass http://www_update_pools;
+        include proxy.conf;
+        }
+		location / {
+        proxy_pass http://www_default_pools;
+        include proxy.conf;
+        }
+		
+		
+		
+#负载均衡监测节点状态，淘宝技术团队开了一个Tengine(Nginx分支)nginx_upstream_check_module模块
+#下载：https://github.com/yaoweibin/nginx_upstream_check_module/zip/master模块
+cd /home/tht/tools/
+wget https://codeload.github.com/yaoweibin/nginx_upstream_check_module/zip/master
+unzip master
+cd nginx-1.14.0
+patch -p1 < ../nginx_upstream_check_module-master/check_1.14.0+.patch
+./configure --user=www --group=www --prefix=/application/nginx-1.14.0/ --with-http_ssl_module  --with-http_stub_status_module --add-module=../nginx_upstream_check_module-master/
+make
+make install
+
+
+#nginx_upstream_check_module使用方法
+
+    upstream www_server_pools {
+        server 192.168.237.10 weight=1;
+        server 192.168.237.11 weight=1;
+        check interval=3000 rise=2 fall=5 timeout=1000 type=http;
+        }
+
+		
+    server {
+        listen       80;
+        server_name  www.tang.com;
+        location / {
+        proxy_pass http://www_server_pools;
+        include proxy.conf;
+        }
+        location /status {
+        check_status;
+        access_log off;        
+        }
+        error_page   500 502 503 504  /50x.html;
+    }
+
+#proxy_next_upstream参数
+#将Nginx接收到后端服务器返回proxy_netst_upstream参数定义的状态码时，会将请求转发给正常工作的后端服务器。
+    server {
+        listen       80;
+        server_name  www.tang.com;
+        location / {
+        proxy_pass http://www_server_pools;
+		proxy_next_upstream error timeout invalid_header http_500 http_502 http_503 http_504;
+        include proxy.conf;
+        }
+        location /status {
+        check_status;
+        access_log off;        
+        }
+        error_page   500 502 503 504  /50x.html;
+    }
+

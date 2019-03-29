@@ -1,0 +1,144 @@
+Redis-sentinel
+一、介绍
+Sentinel是一个Redis进程，多个Sentinel进程组成一个sentinel集合，用于监控一个或多个Redis主从集合，当主节点出现故障实现自动故障转移。
+
+
+
+
+
+二、部署
+1、部署三个redis数据节点；
+mkdir /etc/redis
+mkdir /data/{6379,6380,6381,26379,26380,26381} -p
+cat > /etc/redis/redis-6379.conf <<EOF
+port 6379
+daemonize yes
+logfile "6379.log"
+dbfilename "dump-6379.rdb"
+dir "/data/6379/"
+EOF
+
+cat > /etc/redis/redis-6380.conf <<EOF
+port 6380
+daemonize yes
+logfile "6380.log"
+dbfilename "dump-6380.rdb"
+dir "/data/6380/"
+slaveof 127.0.0.1 6379
+EOF
+
+cat > /etc/redis/redis-6381.conf <<EOF
+port 6381
+daemonize yes
+logfile "6381.log"
+dbfilename "dump-6381.rdb"
+dir "/data/6381/"
+slaveof 127.0.0.1 6379
+EOF
+
+redis-server /etc/redis/redis-6379.conf
+redis-server /etc/redis/redis-6380.conf
+redis-server /etc/redis/redis-6381.conf
+
+
+2、部署sentinel节点
+cat > /etc/redis/sentinel-redis-26379.conf <<EOF
+port 26379
+daemonize yes
+logfile "26379.log"
+dbfilename "dump-26379.rdb"
+dir "/data/26379/"
+sentinel monitor mymaster 127.0.0.1 6379 2
+sentinel down-after-milliseconds mymaster 30000
+sentinel parallel-syncs mymaster 1
+sentinel failover-timeout mymaster 180000
+EOF
+
+
+cat > /etc/redis/sentinel-redis-26380.conf <<EOF
+port 26380
+daemonize yes
+logfile "26380.log"
+dir "/data/26380/"
+sentinel monitor mymaster 127.0.0.1 6379 2
+sentinel down-after-milliseconds mymaster 30000
+sentinel parallel-syncs mymaster 1
+sentinel failover-timeout mymaster 180000
+EOF
+
+
+cat > /etc/redis/sentinel-redis-26381.conf <<EOF
+port 26381
+daemonize yes
+logfile "26381.log"
+dir "/data/26381/"
+sentinel monitor mymaster 127.0.0.1 6379 2
+sentinel down-after-milliseconds mymaster 30000
+sentinel parallel-syncs mymaster 1
+sentinel failover-timeout mymaster 180000
+EOF
+
+
+##################################################################################
+配置说明
+sentinel monitor mymaster 127.0.0.1 6379 2    配置要监控的主redis节点
+mymaster:为别名
+127.0.0.1 6379：Master的端口和IP
+2:判断主节点失败需要两sentinel节点同意(一半sentinel节点加1)
+
+sentinel down-after-milliseconds mymaster 30000    sentinel节点会定期发送Ping命令检查Redis节点和其他sentinel节点是否正常，如超过这个时间（毫秒）表示节点不可达
+注：down-after-milliseconds虽然只配置了Master-name参数，但实际上对sentinel节点、主节点、从节点的失败判断同时生效；
+
+sentinel parallel-syncs mymaster 1  在主节点失败后sentinel会选出新的主，其他从节点会向新的主节点进行复制，该参数是控制同时复制的数量。
+
+
+sentinel failover-timeout mymaster 180000   通常被理解为故障转移的超时时间，但实际上作用于故障转移的各个阶段
+1）选出合适的从节点
+2）晋升选出的从节点为主节点
+3）命令其余从节点复制新的主节点
+4）等待原主节点恢复后命令它去复制新的主节点
+
+
+sentinel auth-pass mymaster <Password>  如主节点设置了密码需要配置
+
+
+sentinel notification-script <master anem> <script path>  当发生一些警告级别的sentinel事件后需要执行的脚本
+
+sentinel client-reconfig-script <master anem> <script path>  故障转移结束后会触发对应路径的脚本，并向脚本发送故障转移结果的相关参数。
+
+参数的设置：
+sentinel set <param> <value>
+
+注：只对当前节点生效
+    设置后直接刷新到配置文件中
+	建议所有sentinel节点配置保持一致
+	
+
+
+###################################################################################
+
+
+启动sentinel方法：
+方法一：redis-sentinel /etc/redis/sentinel-redis-26379.conf
+方法二：redis-server /etc/redis/sentinel-redis-26379.conf --sentinel
+
+
+redis-sentinel /etc/redis/sentinel-redis-26379.conf
+redis-sentinel /etc/redis/sentinel-redis-26380.conf
+redis-sentinel /etc/redis/sentinel-redis-26381.conf
+
+redis-cli -p 26379 info sentinel
+# Sentinel
+sentinel_masters:1
+sentinel_tilt:0
+sentinel_running_scripts:0
+sentinel_scripts_queue_length:0
+sentinel_simulate_failure_flags:0
+master0:name=mymaster,status=ok,address=127.0.0.1:6379,slaves=2,sentinels=1
+
+
+
+部署技巧
+1、sentinel节点不能部署在同一物理服务器上；
+2、部署至少三个且是奇数个sentinel节点
+

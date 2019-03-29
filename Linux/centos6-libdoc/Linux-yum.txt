@@ -1,0 +1,5 @@
+保存rpm文件
+sed -i 's/keepcache=0/keepcache=1/'/etc/yum.conf
+
+cachedir=/var/cache/yum/$basearch/$releasever
+keepcache=1

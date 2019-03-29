@@ -1,0 +1,120 @@
+danttang1987
+$ git config --global user.name "danttang1987"
+$ git config --global user.email "hongtaotang@hotmail.com"
+创建版本库
+
+$ mkdir learngit
+$ cd learngit
+$ pwd
+$ git init
+
+添加文件
+$ git add readme.txt
+
+
+提交
+git commit -m <message>
+
+
+
+查看仓库状态
+git status
+
+没有修改的
+#########################################
+$ git status
+On branch master
+nothing to commit, working tree clean
+
+
+表示readme.txt文件被修改
+#########################################
+$ git status
+On branch master
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git checkout -- <file>..." to discard changes in working directory)
+
+        modified:   readme.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")
+
+查看修改内容
+git diff 
+
+$ git diff readme.txt
+diff --git a/readme.txt b/readme.txt
+index dbf746d..ec00a03 100644
+--- a/readme.txt
++++ b/readme.txt
+@@ -11,4 +11,4 @@ curl -s "http://192.168.237.200/nginx-status" | grep 'Active' | awk '{print $NF}
+
+ vi /etc/zabbix/zabbix-agentd.d/ngix.conf
+ 添加用户自定义参数
+-UserParameter=nginx.active,/usr/bin/curl -s "http://192.168.237.200/nginx-status" | grep 'Active' | awk '{print $NF}'
+\ No newline at end of file
++UserParameter=nginx.active,/usr/bin/curl -s "http://192.168.237.200/nginx-status" | grep 'Active' | awk '{print $NF}  tt'
+\ No newline at end of file
+
+Dant@DESKTOP-P0DUK6Q MINGW64 ~/DantDoc (master)
+
+执行git add
+git add readme.txt
+
+
+在执行确认提交
+git commit -m "add readme.txt file TT"
+
+
+
+
+查看版本
+$ git log --pretty=oneline
+584f054175deea5d00bb5d244516364be4821710 (HEAD -> master) add readme.txt file TT
+0b8a529bd501b960c8fa3165faacf0e112467d90 add file
+aad46abafbf45bf54749d6529bef047100caf454 add readme.txt file
+
+Git必须知道当前版本是哪个版本，在Git中，用HEAD表示当前版本，
+上一个版本就是HEAD^，上上一个版本就是HEAD^^，当然往上100个版本写100个^比较容易数不过来，所以写成HEAD~100
+$ git reset --hard HEAD^
+HEAD is now at 0b8a529 add file
+
+如想回到最新的版本需要版本的ID号，现在已经无法通过git log --pretty=oneline查看到最新版本版本了，只能通过前面查看的ID号来回滚了
+$ git log --pretty=oneline
+0b8a529bd501b960c8fa3165faacf0e112467d90 (HEAD -> master) add file
+aad46abafbf45bf54749d6529bef047100caf454 add readme.txt file
+
+
+$git reset --hard 584f05
+
+
+
+如修改错误可以使用如下方式丢弃修改
+
+方法一：
+丢弃工作区的修改，回到版本库存中最新版本、或回到暂存区的版本（如执行git add）
+git checkout -- file
+
+方法二：如已经执行git add，需要回退到版本库中最新版本，需要先执行如下丢弃暂存区的版本：
+git reset HEAD <file>
+在执行
+git checkout -- file
+
+
+删除文件
+确认要删除文件
+1、将文件从工作区删除后，在执行如下命令
+git rm test.txt
+git commit -m ""
+
+误删文件
+git checkout -- filename
+
+
+
+
+git与github配置
+1、在本地用户的主目录中使用git bash 创建sshkey
+ssh-keygen -t rsa -C "youremail@example.com"
+
+2、将创建的id_rsa.pub添加到Github上

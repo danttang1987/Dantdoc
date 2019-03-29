@@ -1,0 +1,47 @@
+检测入侵
+主要检查web站点下所有文件是否被恶意篡改
+
+****在工作中需要对重要的目录做指纹验证
+
+
+find /var/html/www -type f |xargs md5sum >/opt/zhiwen.db.ori
+find /var/html/www -type f >/opt/wenjian.db.ori
+
+
+md5sum -c --quiet /opt/zhiwen.db.ori
+find /var/html/www -type f >/opt/wenjian.db_curr.ori
+diff /opt/wenjian.db*
+
+
+#!/bin/bash
+Usage(){
+	echo "Usage:$0 dir md5sumfile dirfilelistfile"
+	exit 1
+}
+RETVAL=0
+export LANG=en
+CHECK_DIR="$1"
+[ $# -ne 3 ] && Usage
+[ -e $CHECK_DIR ] || Usage
+ZhiWenDbOri="$2"
+FileCountDbOri="$3"
+ErrLog="/opt/checkfile.log"
+[ -e $ZhiWenDbOri ] || Usage
+[ -e $FileCountDbOri ] || Usage
+echo "md5sum -c --quiet $ZhiWenDbOri" >$ErrLog
+md5sum -c --quiet $ZhiWenDbOri &>>$ErrLog
+RETVAL=$?
+
+find $CHECK_DIR -type f >/opt/wenjian.db_curr.ori
+echo "diff $FileCountDbOri /opt/wenjian.db_curr.ori">>$ErrLog
+diff $FileCountDbOri /opt/wenjian.db_curr.ori &>>$ErrLog
+if [ $RETVAL -ne 0 -o `diff /opt/wenjian.db* | wc -l` -ne 0 ]
+then
+	mail -s "`uname -n` $(date +%F) err" zishan@mail.com<$ErrLog
+else
+	echo "sistes dir is ok"|mail -s "`uname -n` $(date +%F) is ok" zishan@mail.com
+
+fi
+
+
+

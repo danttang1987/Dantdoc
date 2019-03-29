@@ -1,0 +1,47 @@
+if语句
+1、语法
+单分支
+if <条件>;then
+	cmd
+fi
+
+if <条件>
+then
+	cmd
+fi
+
+双分支
+if <条件>;then
+	cmd1
+else
+	cmd2
+fi
+
+多分支
+if <条件>
+	then
+		cmd1
+elif
+	then
+		cmd2
+elif
+	then
+		cmd3
+else
+		cmd4
+fi
+
+案例：监控服务器内存，如内存可用空小于100M，发邮件
+1、配置邮件客户端
+echo -e "set from=zishan@163.com smtp=smtp.163.com\nset smtp-auth-user=zishan smtp-auth-password=123.com smtp-auth=login" >>/etc/mail.rc
+2、编写脚本
+[root@d03 shell]# cat monitor-memory.sh 
+#!/bin/bahs
+FreeMem=`free -m | awk 'NR==3{print $NF}'`
+CHARS="Current memory is $FreeMem"
+if [ $FreeMem -lt 100 ]
+then
+        echo $CHARS |tee /tmp/messages.txt
+        mail -s "`date +%F-%T`$CHARS" zishan@hotmail.com </tmp/messages.txt
+if
+[root@d03 shell]# 

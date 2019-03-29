@@ -1,0 +1,138 @@
+﻿#PHP配置扩展插件
+sed -i 's#;extension_dir = "/"#extension_dir = "/application/php5.3.29/lib/php/extensions/no-debug-non-zts-20090626/"#' /application/php/lib/php.ini
+cat >> /application/php/lib/php.ini <<EOF
+extension=memcache.so
+extension=imagick.so
+extension=xcache.so
+EOF
+
+
+#配置eAccelerator插件生效，并配置优化参数
+cd /application/php/lib
+mkdir -p /tmp/eaccelerator
+chown -R www.www /tmp/eaccelerator
+cat >>php.ini <<EOF
+[eaccelerator]
+extension=eaccelerator.so
+eaccelerator.shm_size="64"
+eaccelerator.cache_dir="/tmp/eaccelerator"
+eaccelerator.enable="1"
+eaccelerator.optimizer="1"
+eaccelerator.check_mtime="1"
+eaccelerator.debug="0"
+eaccelerator.filter=""
+eaccelerator.shm_max="0"
+eaccelerator.shm_ttl="3600"
+eaccelerator.shm_prune_period="3600"
+eaccelerator.shm_only="0"
+eaccelerator.comperss="1"
+eaccelerator.comperss_level="9"
+EOF
+
+#下面三个参数
+eaccelerator.keys="shm_and_disk"
+eaccelerator.seddions="shm_and_disk"
+eaccelerator.content="shm_and_disk"
+
+#可设置值为
+#"shm_and_disk"  缓存数据在内存和磁盘上，为默认值
+#"shm"   缓存数据在内存，内存满了或数据大于shm_max，缓存到磁盘
+#"shm_only"  只缓存在内存
+#"disk_only"   只缓存在磁盘
+pkill php-fpm
+/application/php/sbin/php-fpm
+ps -ef | grep php-fpm | grep -v grep |wc -l
+
+#使用tmpfs优化tmp/eaccelerator目录，
+mount -t tmpfs -o size=64m tmpfs /tmp/eaccelerator
+
+#检查是否挂载正常
+df -hl
+#Filesystem            Size  Used Avail Use% Mounted on
+#/dev/mapper/VolGroup-lv_root
+#                       18G  2.6G   14G  16% /
+#tmpfs                 490M     0  490M   0% /dev/shm
+#/dev/sda1             477M   66M  387M  15% /boot
+#tmpfs                  64M     0   64M   0% /tmp/eaccelerator
+grep eacc /proc/mounts
+#tmpfs /tmp/eaccelerator tmpfs rw,relatime,size=65536k 0 0
+
+
+
+#XCache插件加速配置
+cd /application/php/lib
+cat >> php.ini <<EOF
+;xcache config by tanghongtao 20181101
+[xcache-common]
+extension = xcache.so
+[xcache.admin]
+xcache.admin.enable_auth = On
+xcache.admin.user = "mOo"
+xcache.admin.pass = "md5 encrypted password"
+[xcache]
+xcache.shm_scheme =        "mmap"
+xcache.size  =               256M
+xcache.count =                 2
+xcache.slots =                8K
+xcache.ttl   =                 86400
+xcache.gc_interval =           3600
+xcache.var_size  =            64M
+xcache.var_count =             1
+xcache.var_slots =            8K
+xcache.var_ttl   =             0
+xcache.var_maxttl   =          0
+xcache.var_gc_interval =     300
+xcache.var_namespace_mode =    0
+xcache.var_namespace =        ""
+xcache.readonly_protection = Off
+xcache.mmap_path =    "/dev/zero"
+xcache.coredump_directory =   ""
+xcache.coredump_type =         0
+xcache.disable_on_crash =    Off
+xcache.experimental =        Off
+xcache.cacher =               On
+xcache.stat   =               On
+xcache.optimizer =           Off
+[xcache.coverager]
+xcache.coverager =           Off
+xcache.coverager_autostart =  On
+xcache.coveragedump_directory = ""
+EOF
+
+#修改管理员密码
+PassWord=`echo -n "123456" |md5sum | awk '{print $1}'`
+
+sed -i 's/md5 encrypted password/'$PassWord'/g' php.ini
+
+
+cd /home/tang/tools/xcache-3.2.0
+cp -a htdocs/ /application/nginx/html/blog/xadmin
+chown -R www.www /application/nginx/html/blog/xadmin
+#可访问xadmin查看xcache状态
+
+pkill php-fpm
+/application/php/sbin/php-fpm
+ps -ef | grep php-fpm | grep -v grep |wc -l
+
+
+
+
+
+#xendOpcache插件加速
+cd /application/php/lib
+cat >> php.ini <<EOF
+[opcache]
+zend_extension=/application/php5.3.29/lib/php/extensions/no-debug-non-zts-20090626/;extension=opcache.so
+opcache.memory_consumtion=128
+opcache.interned_strings_buffer=8
+opcache.max_accelerated_files=4000
+opcache.revalidate_freq=60
+opcache.fast_shutdown=1
+opcache.enable_cli=1
+EOF
+
+
+pkill php-fpm
+/application/php/sbin/php-fpm
+ps -ef | grep php-fpm | grep -v grep |wc -l
+#访问phpinfo()查看是否生效

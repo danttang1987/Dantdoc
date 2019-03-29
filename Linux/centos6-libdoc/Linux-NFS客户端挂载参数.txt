@@ -1,0 +1,54 @@
+#NFS客户端挂载参数说明
+#fg >>前台挂载   mount会持续尝试挂载，直到成功或超时；   默认值
+#bg >>后台挂载   mount会在后台多次进行挂载，挂载过程中不影响其他操作，如网络不稳定或服务需要常常关机建议使用bg
+#soft  >>可能会造成数据丢失  一般不用，
+#hard  >>客户端一直与服务端保持联系，如有回应才继续操作，如没有回应将一直尝试，此时无法使用umount或kill,所以常与intr配合使用；
+#intr   >>使用hard挂载后的资源timeout时间。避免NFS锁死系统
+#rsize   >>读取块的大小  6.*默认：131072    5.*默认：1024
+#wsize   >>写入块的大小  6.*默认：131072    5.*默认：1024
+#porto=tcp/udp    默认为tcp,在LAN环境下使用UDP可提高性能
+
+
+
+#suid      >>默认值；
+#nosuid    >>当挂载的文件系统中有任何SUID的程序时，只要使用nosuid就能取消设置SUID功能（可提高安全性）
+#rw        >>
+#ro        >>
+#dev       >>是否保留设备文件的特殊功能，默认值；
+#nodev     >>一般不需要，可以设置，（可提高安全性）
+#exec      >>默认值；
+#noexec    >>当挂载的文件系统中执行文件权限（可提高安全性）
+#user      >>是否允许用户拥有文件系统的挂载与卸载功能
+#nouser    >>默认值；（可提高安全性）
+#auto      >>
+#noauto    >>使用mount -a是否能看到
+#atime     >>更新文件访问后inode的时间戳
+#noatime   >>不更新文件访问后inode的时间戳（提高性能）
+#sync      >>同步处理保障数据安全性
+#nosync    >> 异步处理提升性能，但安全性不高
+#diratime  >>
+#nodiratime >>不更新目录访问后inode的时间戳（提高性能）
+#remount >>用来改变已经挂载的文件系统的参数，而不需要重新挂载
+#dirsync  >>目录更新的磁盘同步
+
+#生产环境建议参数：
+mount -t nfs -o hard,bg,noatime,nodiratime,nosuid,noexec,nodev,intr,sync 192.168.237.14:/wwwfile /video
+
+#强制卸载
+umount -lf /mnt
+
+#NFS服务器内核优化
+
+cat >>/etc/sysctl.conf <<EOF
+net.core.wmem_default = 8388608
+net.core.rmem_default = 8388608
+net.core.rmem_max = 16777216
+net.core.wmem_max = 16777216
+EOF
+
+
+
+
+
+
+

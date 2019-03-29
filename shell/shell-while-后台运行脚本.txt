@@ -1,0 +1,53 @@
+shell-while-unitl
+
+
+while <条件表示式>
+do 
+	cmd
+	
+done
+
+
+示例：
+[root@d03 shell]# cat uptime.sh 
+#!/bin/bash
+while true
+do
+        uptime >> /home/tht/shell/uptime.log
+        sleep 2
+done
+
+while读取文件
+exec <file
+while read line
+do
+	echo $line
+done
+
+
+或
+
+while read line
+do
+	echo $line
+done<file
+
+
+
+sh uptime.sh &  将脚本放到后台执行
+Ctl+c  结束运行脚本
+Ctl+z  暂停运行脚本
+jobs  查看当前执行的脚本或任务
+bg     将脚本后台运行
+fg     将脚本前台运行
+kill  关闭脚本，即以"kill % 任务编号"  关闭
+
+ps      ## 显示进程
+pstree  ##显示进程树
+top     ##显示进程
+renice  ##改变进程优先级
+nohup   ##用户退出系统后进程继续工作
+pgrep   ##查找匹配条件的进程
+strace  ##跟踪一个进行的系统调用
+ltrace  ##跟踪一个进程的函数情况
+

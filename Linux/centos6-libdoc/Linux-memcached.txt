@@ -1,0 +1,185 @@
+sed -i '/HOSTNAME=/d;1aHOSTNAME=mem01' /etc/sysconfig/network
+sed -i '/IPADDR=/d;/NETMASK/iIPADDR=192.168.237.18' /etc/sysconfig/network-scripts/ifcfg-eth0
+echo "192.168.237.10    web01" >> /etc/hosts
+echo "192.168.237.11    web02" >> /etc/hosts
+echo "192.168.237.15    lb01" >> /etc/hosts
+echo "192.168.237.16    lb02" >> /etc/hosts
+echo "192.168.237.18    mem01" >> /etc/hosts
+
+
+yun install libevent libevent-devel nc -y
+yum install memcached -y
+
+#也可以使用编译安装
+
+
+
+
+
+
+#启动memcached
+memcached -m 16m -p 11211 -d -u root -c 8192
+lsof -i :11211
+
+#也可以同时启动多个实例
+memcached -m 16m -p 11212 -d -u root -c 8192
+
+#启动参数说明：
+
+#进程与连接设置
+-d      >>>以守护进行方式运行服务
+-u      >>>指定支持memcached的用户；
+-l      >>>指定memcached监听的IP
+-p(小写)>>>指定memcached监听的端口
+-P(大写)>>>指定memcached的PID保存文件的位置
+
+#内存相关设置
+-m      >>>指定memcached可用的最大内存
+-M      >>>Memcached服务内存不够时禁止LRU，如内存满了会报错
+-n      >>>为Key+value+flags分配的最小内存空间，默认为48字节
+-f      >>>chunk size增长的因子，默认1.25
+-L      >>>启用大内存页，可以降低内存浪费，改善性能 
+       
+#并发连接设置
+-c      >>>最大并发连接数  默认1024；
+-t      >>>线程数，默认4
+-R      >>>每个event最大的请求数 默认为20；
+-C      >>>禁用CAS，可以禁止版本计数；
+        
+调式参数
+-v      >>>打印较少的error/warinings
+-vv     >>>打印非常多的调式信息和错误输出到控制台，也打印客户端命令及响应
+-vvv    >>>打印极我的调式信息和错误输出，也打印内部状态转变
+
+#memcached数据写入和读取和删除
+set
+get
+delete
+
+printf "set key1 0 0 6\r\ntanght\r\n" |nc 127.0.0.1 11211
+
+printf "get key1\r\n" |nc 127.0.0.1 11211
+
+printf "delete key1\r\n"|nc 127.0.0.1 11211
+
+set    key1      0     0    6\r\n   <datablock>\r\n
+命令   key名  flags exptime  bytes   数据
+
+命令：set:无论如何都写入数据；add:只有在数据存在的时候才会添加数据；repalce：只有在数据存在时要替换；append:往后面追加；prepend:往前面追加；cas:安版本号更改
+key :普通字符，要求小于250个字符，不包含空格和控制字符
+flags:客户端用来标识数据格式的数值
+exptime:数据存活时间s，0为永远，小于30天
+bytes:字节数；
+
+
+
+#关闭memcached
+killall memcached
+#或
+pkill memcached
+
+#问题如是多实例，只想关闭一个实例，就不好操作了
+memcached -m 16m -p 11211 -d -u root -c 8192 -P /var/run/11211.pid
+memcached -m 16m -p 11212 -d -u root -c 8192 -P /var/run/11212.pid
+
+kill `cat /var/run/11211.pid`
+
+
+
+
+#php配置memcache插件见php插件配置
+
+#php测试memcache
+
+<?php
+	$memcache = new Memcache;
+	$memcache->connect('192.168.237.18',11211) or die ("could not connect my server");
+	$memcache->set ('key','tanghongtao to test');
+	$get= $memcache->get ('key');
+	echo $get;
+?>
+
+
+#memcache服务监控脚本
+#! /bin/bash
+export MemcachedIp=$1
+export MemcachedPort=$2
+export NcCmd="nc $MemcachedIp $MemcachedPort"
+export MD5=3fe392334231
+USAGE(){
+echo "$0 MemcachedIp MemcachedPort"
+exit 3
+}
+[ $# -ne 2 ] && USAGE
+printf "set $MD5 0 0 5\r\nthang\r\n"|$NcCmd >/dev/null 2>&1
+if [ $? -eq 0 ];then
+    if [ `printf "get $MD5\r\n"|$NcCmd |grep thang|wc -l` -eq 1 ];then
+	    echo "memcached $MemcachedIp $MemcachedPort is OK"
+		printf "delete $MD5\r\n"|$NcCmd >/dev/null 2>&1
+		exit 0
+	fi
+else
+echo "memcached $MemcachedIp $MemcachedPort is down"
+fi
+
+
+#查看memcache服务状态的命令
+stats            >>统计memcache的各种信息
+stats settings   >>查看一此Memcache的设置信息，如线程数
+stats slabs      >>查看slabs相关情况 如：chunksize长度
+stats items      >>查看items相关情况
+stats sizes      >>查看items的个数和大小
+stats reset      >>清理统计数据
+
+
+printf "stats\r\n"|nc 127.0.0.1 11211
+STAT pid 24574                  》
+STAT uptime 56                  》
+STAT time 1542959181            》
+STAT version 1.4.4              》
+STAT pointer_size 64            》
+STAT rusage_user 0.000000       》
+STAT rusage_system 0.008998     》
+STAT curr_connections 10        》当前并发连接数
+STAT total_connections 14       》总共连接数
+STAT connection_structures 11   》
+STAT cmd_get 1                  》get命令数
+STAT cmd_set 1                  》set命令数
+STAT cmd_flush 0                》flush命令数
+STAT get_hits 1                 》get命中数
+STAT get_misses 0               》get未命中数
+STAT delete_misses 0            》
+STAT delete_hits 0              》
+STAT incr_misses 0              》
+STAT incr_hits 0                》
+STAT decr_misses 0              》
+STAT decr_hits 0                》
+STAT cas_misses 0               》
+STAT cas_hits 0                 》
+STAT cas_badval 0               》
+STAT auth_cmds 0                》
+STAT auth_errors 0              》
+STAT bytes_read 63              》
+STAT bytes_written 44           》
+STAT limit_maxbytes 16777216    》最大内存
+STAT accepting_conns 1          》
+STAT listen_disabled_num 0      》
+STAT threads 4                  》
+STAT conn_yields 0              》
+STAT bytes 82                   》
+STAT curr_items 1               》
+STAT total_items 1              》
+STAT evictions 0                》
+END                             》
+[root@mem01 scripts]# 
+
+
+
+
+#memcache在集群中的Session共享存储
+#在php.ini文件中默认为
+;session.save_handler = files
+;session.save_path = "/tmp"
+#改为
+session.save_handler = memcache
+session.save_path = "tcp://192.168.237.18:11211"

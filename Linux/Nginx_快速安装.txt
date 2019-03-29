@@ -1,0 +1,90 @@
+sed -i '/HOSTNAME=/d;1aHOSTNAME=lb02' /etc/sysconfig/network
+sed -i '/IPADDR=/d;/NETMASK/iIPADDR=192.168.237.16' /etc/sysconfig/network-scripts/ifcfg-eth0
+echo "192.168.237.10    web01" >> /etc/hosts
+echo "192.168.237.11    web02" >> /etc/hosts
+echo "192.168.237.15    lb01" >> /etc/hosts
+echo "192.168.237.16    lb02" >> /etc/hosts
+yum install pcre pcre-devel openssl-devel -y
+useradd www -u 501 -s /sbin/nologin -M
+mkdir /home/tht/tools -p
+cd /home/tht/tools
+wget http://nginx.org/download/nginx-1.14.0.tar.gz
+tar xf nginx-1.14.0.tar.gz
+cd nginx-1.14.0
+./configure --user=www --group=www --prefix=/appliction/nginx-1.14.0/ --with-http_ssl_module  --with-http_stub_status_module
+make
+make install
+ln -s /appliction/nginx-1.14.0/ /appliction/nginx
+cp nginx.conf{,.ori}
+cat nginx.conf.ori | egrep -v "#|^$" >nginx.conf
+/appliction/nginx/sbin/nginx -t
+/appliction/nginx/sbin/nginx
+netstat -lntup | grep 80
+lsof -i :80
+/appliction/nginx/sbin/nginx -V
+
+
+
+yum install zlib-devel libxml2-devel libjpeg-devel libjpeg-turbo-devel libiconv-devel freetype-devel libpng-devel libxslt-devel gd-devel libcurl-devel -y
+cd /home/tht/tools
+wget https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.15.tar.gz
+tar zxf libiconv-1.15.tar.gz
+cd libiconv-1.15
+./configure --prefix=/usr/local/libiconv
+make
+make install
+wget -O /etc/yum.repos.d/epel.repo http://mirrors.aliyun.com/repo/epel-6.repo
+yum -y install libmcrypt-devel
+yum install -y mhash
+yum install -y mcrypt
+mkdir -p /home/tht/tools
+cd /home/tht/tools
+wget http://cn2.php.net/get/php-5.3.29.tar.gz/from/this/mirror
+tar zxf php-5.3.29.tar.gz
+cd php-5.3.29
+./configure \
+--prefix=/application/php5.3.29 \
+--with-mysql=mysqlnd \
+--with-iconv-dir=/usr/local/libiconv \
+--with-freetype-dir \
+--with-jpeg-dir \
+--with-png-dir \
+--with-zlib \
+--with-libxml-dir=/usr \
+--enable-xml \
+--disable-rpath \
+--enable-safe-mode \
+--enable-bcmath \
+--enable-shmop \
+--enable-sysvsem \
+--enable-inline-optimization \
+--with-curl \
+--with-curlwrappers \
+--enable-mbregex \
+--enable-fpm \
+--enable-mbstring \
+--with-mcrypt \
+--with-gd \
+--enable-gd-native-ttf \
+--with-openssl \
+--with-mhash \
+--enable-pcntl \
+--enable-sockets \
+--with-xmlrpc \
+--enable-zip \
+--enable-soap \
+--enable-short-tags \
+--enable-zend-multibyte \
+--enable-static \
+--with-xsl \
+--with-fpm-user=www \
+--with-fpm-group=www \
+--enable-ftp
+touch ext/phar/phar.phar
+make
+make install
+ln -s /application/php5.3.29 /application/php
+cp php.ini-production /application/php/lib/php.ini
+cd /application/php/etc
+cp php-fpm.conf.default php-fpm.conf
+/application/php/sbin/php-fpm

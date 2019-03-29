@@ -1,0 +1,70 @@
+特殊的变量
+1、位置变量
+	如：$1 $2 $0 $* $# #@
+	$0:获取当前执行的Shell脚本的文件名，如脚本包含了路径，那么就包括脚本路径
+	$n：获取当前执行脚本的第N个参数，n为0-9，如果大于9需要使用{}括起
+	$#：获取当前执行Shell脚本的参数的个数
+	$*：获取当前执行Shell脚本的所有参数，如不加“”号与$@一样，如加引号所有参数视为单个字符串
+	$@：获取当前执行Shell脚本的所有参数，如不加引号与$*一样，如加引号表示不同的独立的字符串相当于"$1" "$2"
+	
+	dirname
+	basename
+	示例：
+	[root@d03 shell]# cat scripts1.sh 
+	#!/bin/bash
+	# Date:    
+	# Author:   Zishan
+	# Description:   
+	# Version:1.1
+	echo "dirname:`dirname $0`"
+	echo "basename:`basename $0`"
+	
+	
+	[root@d03 shell]# sh /home/tht/shell/scripts1.sh 
+	dirname:/home/tht/shell
+	basename:scripts1.sh
+	
+	$*与$@的示例：
+	[root@d03 shell]# set -- "I am" handsome oldbody
+	
+	[root@d03 shell]# echo $*
+	I am handsome oldbody
+	[root@d03 shell]# echo $@
+	I am handsome oldbody
+	
+	$*和$@不使用引号的结果一样
+	[root@d03 shell]# for i in $*; do echo $i ;done
+	I
+	am
+	handsome
+	oldbody
+	
+	[root@d03 shell]# for i in $@; do echo $i ; done
+	I
+	am
+	handsome
+	oldbody
+	
+	$*和$@使用引号的结果不一样，使用"$@"是我们想要的结果
+	[root@d03 shell]# for i in "$*";do echo $i ; done
+	I am handsome oldbody
+	
+	[root@d03 shell]# for i in "$@";do echo $i;done
+	I am
+	handsome
+	oldbody
+	[root@d03 shell]#
+
+2、特殊的状态变量
+	shell中有如下几个状态变量$?  $$  $!  $_
+	$?：获取上次命令执行的结果，0为成功，其他为失败
+	$$：获得当前执行的Shell脚本的进程PID
+	$!:获得上一个工作台的进程ID
+	$_:获取在此之前执行的命令或脚本的最后一个参数
+	
+	
+	
+	
+
+
+	

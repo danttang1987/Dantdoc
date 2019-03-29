@@ -1,0 +1,29 @@
+cobbler自动重装-cobbler-Web
+
+cobbler重装系统需要安装一个软件 koan
+
+yum instll -y koan
+
+koan --server=cobblerIP --list=profile
+
+koan --replace-self --server=cobblerIP  --profile=centos-7-x86_64
+
+
+环境设计：装机专用VLAN
+
+
+
+cobbler-web
+
+https://ip/cobbler/cobbler-web
+修改cobbler-web密码
+
+htdigest /etc/cobbler/users.digest "Cobbler" cobbler
+
+
+
+修改Cobbler提示界面
+vim /etc/cobbler/pxe/pxedefault.template
+
+可修title
+

@@ -1,0 +1,302 @@
+#Nginx配置
+worker_processes  1;
+error_log logs/error.log;
+pid logs/nginx.pid;
+events {
+    worker_connections  1024;
+}
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    sendfile        on;
+    keepalive_timeout  65;
+    server {
+        listen    192.168.237.10:80;
+        server_name  www.tang.com;
+        location / {
+            root   html/www;
+            index  index.html index.htm;
+        }
+    }
+     server {
+        listen       192.168.237.20:80;
+        server_name  bbs.tang.com;
+        location / {
+            root   html/bbs;
+            index  index.html index.htm;
+        }
+    }
+}
+
+
+mkdir /application/nginx/html/{www,bbs}
+echo www >>/application/nginx/html/www/index.html
+echo bbs >>/application/nginx/html/bbs/index.html
+#配置基于域的虚拟主机
+
+    server {
+        listen       80;
+        server_name  www.tang.com;
+        location / {
+            root   html/www;
+            index  index.html index.htm;
+        }
+    }
+     server {
+        listen       80;
+        server_name  bbs.tang.com;
+        location / {
+            root   html/bbx;
+            index  index.html index.htm;
+        }
+    }
+
+/application/nginx/sbin/nginx -t
+/application/nginx/sbin/nginx -s reload
+
+#配置基于端口
+    server {
+        listen       80;
+        server_name  www.tang.com;
+        location / {
+            root   html/www;
+            index  index.html index.htm;
+        }
+    }
+     server {
+        listen       81;
+        server_name  bbs.tang.com;
+        location / {
+            root   html/bbs;
+            index  index.html index.htm;
+        }
+    }
+/application/nginx/sbin/nginx -t
+/application/nginx/sbin/nginx -s reload
+
+
+#配置基于IP
+    server {
+        listen    192.168.237.10:80;
+        server_name  www.tang.com;
+        location / {
+            root   html/www;
+            index  index.html index.htm;
+        }
+    }
+     server {
+        listen       192.168.237.20:80;
+        server_name  bbs.tang.com;
+        location / {
+            root   html/bbs;
+            index  index.html index.htm;
+        }
+    }
+
+#修改了IP需要重启服务
+pkill nginx
+/application/nginx/sbin/nginx
+
+#配置独立的虚拟主机配置文件
+mkdir /application/nginx/conf/extra/
+cat > /application/nginx/conf/nginx.conf <<EOF
+worker_processes  1;
+error_log logs/error.log;
+pid logs/nginx.pid;
+events {
+    worker_connections  1024;
+}
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    sendfile        on;
+    keepalive_timeout  65;
+    include extra/www.conf;
+    include extra/bbs.conf;
+}
+EOF
+cat > /application/nginx/conf/extra/www.conf <<EOF
+    server {
+        listen       80;
+        server_name  www.tang.com;
+        location / {
+            root   html/www;
+            index  index.html index.htm;
+        }
+    }
+EOF
+cat > /application/nginx/conf/extra/bbs.conf <<EOF
+    server {
+        listen       80;
+        server_name  bbs.tang.com;
+        location / {
+            root   html/bbs;
+            index  index.html index.htm;
+        }
+    }
+EOF
+#配置了配置独立的虚拟主机配置文件后需要重启Nginx
+pkill nginx
+/application/nginx/sbin/nginx
+
+#虚拟主机别名的配置
+cat > /application/nginx/conf/extra/bbs.conf <<EOF
+    server {
+        listen       80;
+        server_name  bbs.tang.com tang.com;
+        location / {
+            root   html/bbs;
+            index  index.html index.htm;
+        }
+    }
+EOF
+/application/nginx/sbin/nginx -t
+/application/nginx/sbin/nginx -s reload
+
+#Nginx状态信息功能
+/application/nginx/sbin/nginx -V
+#确认是否安装--with-http_stub_status_module
+
+#配置方法
+cat > /application/nginx/conf/extra/status.conf <<EOF
+    server {
+        listen       80;
+        server_name  status.tang.com;
+        location / {
+            stub_status on;
+            access_log off;
+            allow 192.168.237.0/24;
+            deny all;
+        }
+    }
+EOF
+/application/nginx/sbin/nginx -t
+/application/nginx/sbin/nginx -s reload
+
+#通过浏览访问后结果如下
+#Active connections: 2 
+#server accepts handled requests
+# 10 10 6 
+#Reading: 0 Writing: 1 Waiting: 1 
+
+#Active connections:当前的并发连接数；
+#server：共建立了多个连接
+#accepts:共有多少握手
+#handled requests表示总共处理了次
+
+
+
+#增日志
+sed -i '2aerror_log   logs/error.log' /application/nginx/conf/nginx.conf
+
+#访问日志access_log,记录用户访问记录，由ngx_http_log_module提供，主要由两个参数控制
+#log_format    用来定义日志的格式
+#access_log    指定日志存放的位置和格式
+
+#log_format main '$remote_addr - $remote_user [$time_local] "$request"' '$status $body_bytes_sent "$http_referer"' '"$http_user_agent" "$http_x_forwarded_for"';
+#access_log    logs/www_access.log main;
+
+#access_log可以配置其它参数,如：
+#access_log path [format [buffer=size [flush=time]]] [if=condition];
+#access_log path [format gzip=[level] [buffer=size [flush=time]]] [if=condition];
+
+
+#access_log生产优化参数如下：
+
+#access_log    logs/www_access.log main gzip buffer=64k flush=5s;
+#或
+#access_log    off;
+
+#配置access日志截断
+cat >/server/script/cut_nginx_log.sh <<EOF
+#! /bin/sh
+Deteformat=\`date +%Y%m%d\`
+Basedir="/application/nginx"
+Nginxlogdir="\$Basedir/logs"
+Logname="www_access"
+[ -d \$Nginxlogdir ] && cd \$Nginxlogdir || exit 1
+[ -f \${Logname}.log ] || exit 1
+/bin/mv \${Logname}.log \${Deteformat}_\${Logname}.log
+\${Basedir}/sbin/nginx -s reload
+EOF
+
+echo "00 00 * * *    /bin/sh /server/script/cut_nginx_log.sh >/dev/null 2>&1" >> /var/spool/cron/root
+
+
+#Location，在Server中   语法：
+#location [=|~|~*|^~] uri {
+
+#}
+#"~"  用于区分大小写
+#“~*”   不区分大小写
+#“^~”    进行常规检查不做正则
+cat >/application/nginx/conf/extra/www.conf <<EOF
+    server {
+        listen       80;
+        server_name  www.tang.com;
+        access_log    logs/www_access.log main;
+        location / {
+            root   html/www;
+            index  index.html index.htm;
+        }
+        location = / {
+        return 401;
+        }
+        location /documents/ {
+        return 403;
+        }
+        location ^~ /images/ {
+        return 404;
+        }
+        location ~* \.(gif|jpg|jpeg) {
+        return 500;
+        }
+        access_log    logs/www_access.log main gzip buffer=64k flush=5s;
+    }
+EOF
+
+#使用curl测试结果
+curl -s -o /dev/null -I -w "%{http_code}\n" http://www.tang.com
+
+#匹配优先级：= => ^~   =>  ~*  =>  /****/  =>  /
+
+
+
+#rewrite URS重写
+#配置在Server中例如：
+rewrite ^/ (.*) http://bbs.tang.com/$1 permanent
+#表示访问所有都重定向到http://bbs.tang.com/访问内容（）$1表示向后引用，permanent表示永久重定向
+#flag标记说明
+#last   继续向下匹配
+#break   匹配终止
+#redirect    302临时重定向
+#permanent   301永久重定向
+
+
+
+
+
+#访问认证
+#在location或server中添加如下：
+
+location /documents/ {
+        auth_basic  "closed site";
+        root	html/www;
+        auth_basic_user_file /appliction/nginx/conf/htpasswd;
+        }
+
+#配置密码文件使用htpasswd创建密码文件，htpasswd在httpd中
+yun install httpd -y
+htpassed -bc /application/nginx/conf/htpasswd tang 123.com
+
+#403，资源不可用问题分析，一般有如下原因：
+#1、配置index;
+#2、目录下没有指定文件，或没有权限；
+#为防止以上问题发生，可通过一个参数
+#autoindex on    但不安全，在没有index的时候会列出目录。
+
+   
+
+
+
+

@@ -1,0 +1,37 @@
+tar zxf mysql-5.5.32.tar.gz 
+cd mysql-5.5.32
+cmake . -DCMAKE_INSTALL_PREFIX=/application/mysql-5.5.32 \
+-DMYSQL_DATADIR=/application/mysql-5.5.32/data \
+-DMYSQL_UNIX_ADDR=/application/mysql-5.5.32/tmp/mysql.sock \
+-DDEFAULT_CHARSET=utf8 \
+-DDEFAULT_COLLATION=utf8_general_ci \
+-DEXTRA_CHARSETS=gbk,gb2312,utf8,ascii \
+-DENABLED_LOCAL_INFILE=ON \
+-DWITH_INNOBASE_STORAGE_ENGINE=1 \
+-DWITH_FEDERATED_STORAGE_ENGINE=1 \
+-DWITH_BLACKHOLE_STORAGE_ENGINE=1 \
+-DWITHOUT_EXAMPLE_STORAGE_ENGINE=1 \
+-DWITHOUT_PARTITION_STORAGE_ENGINE=1 \
+-DWITH_FAST_MUTEXES=1 \
+-DWITH_ZLIB=bundled \
+-DENABLED_LOCAL_INFILE=1 \
+-DWITH_READLINE=1 \
+-DWITH_EMBEDDED_SERVER=1 \
+-DWITH_DEBUG=0
+
+
+
+北京老男孩教育，全国最高端、最专业、最负责的linux运维教育机构！欢迎伙伴们实地考察！
+
+1、老男孩linux中高级运维就业课程11月在开3个班
+http://oldboy.blog.51cto.com/2561410/1241554
+2、老男孩linux高级架构师课程(12-25k)
+http://oldboy.blog.51cto.com/2561410/1334659
+3、老男孩linux python高级运维开发课程(11月开课)
+http://oldboy.blog.51cto.com/2561410/1123127
+4、老男孩linux MySQL专业DBA课程12月开课
+http://oldboy.blog.51cto.com/2561410/1354782
+咨询QQ:70271111  41117397  41117483 80042789 390320151
+电话: 01060747396  18911718229 18600338340
+官方群 08群384467551（新） 06群246054962（满） 07群145178854（新） 03群208160987（快满）(标明51CTO)
+老男孩老师QQ 49000448 31333741（课多无法及时解答问题，答疑请进群。）

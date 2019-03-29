@@ -1,0 +1,38 @@
+cobbler自定义yum源
+
+cobbler主要目录
+
+rpm -ql cobbler
+
+
+/var/www/cobbler
+	ks_mirror
+	repo_mirror
+
+
+/val/lib/cobbler
+
+
+/etc/cobbler
+
+
+创建私有yum源
+cobbler repo add --name=centos7-epel --mirror=https://mirrors.aliyun.com/epel/7/x86_64/ --arch=x86_64 --breed=yum
+cobbler repo add --name=centos6-epel --mirror=https://mirrors.aliyun.com/epel/6Server/x86_64/ --arch=x86_64 --breed=yum
+
+同步
+cobbler reposync
+
+
+让系统自动安装私有yum源
+cobbler profile edit --name=centos-7-x86_64  --repos="opstack-mitaka"
+
+在kickstartk中的post里。
+$yum_config_stanza
+
+定期同步yum源。
+
+echo "1 3 * * * /usr/bin/cobbler reposync --tries=3 --no-fail" >>/var/spool/cron/root
+
+
+

@@ -1,0 +1,21 @@
+28、系统监控-IO
+
+硬盘：
+	IOPS:
+		顺序IO
+		随机IO
+	
+	工具：
+		df -hl
+		iotop:yum install iotop -y，可以查看哪个进程在使用IO
+		iostat:可以查看哪个磁盘IO使用多
+		
+网络：
+	工具：
+		iftop：
+		
+		alibench.com
+		ce.cloud.360.cn
+		ping.chinz.com
+		
+	IBM：nmon

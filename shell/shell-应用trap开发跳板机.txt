@@ -1,0 +1,28 @@
+应用trap开发跳板机
+1、创建配置文件格式如下：
+IP:计算机描述:用户名1 用户名2 用户名3 ....
+
+trap ":" INT EXIT TSTP TERM HUP
+ConfigFile=/etc/jump.conf
+i=1
+IFSTMP=$IFS
+IFS=$'\n'
+for line in `cat $ConfigFile | grep -iw $USER`
+do
+        IP[$i]=`echo $line|awk -F ":" '{print $1}'`
+        DES[$i]=`echo $line|awk -F ":" '{print $2}'`
+        DESselect[$i]="${IP[$i]}-${DES[$i]}"
+        ((i++))
+done
+IFS=$IFSTMP
+PS3="Please select connication host number:"
+select id in ${DESselect[@]}
+do
+        itens="${#DESselect[@]}"
+        if [ "$REPLY" -le "$itens" ]
+        then
+                echo "/usr/bin/ssh -p52113 ${IP[$REPLY]}"
+        else
+                echo "Please select You want conniction host number"
+        fi
+done

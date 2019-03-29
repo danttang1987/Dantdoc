@@ -1,0 +1,90 @@
+expect自动交互式功能
+
+spawn命令：
+spawn [选项] [需要自动交互的命令或程序]
+
+expect命令：
+expect 表达式 [动作]
+例如：
+spawn ssh -p52113 192.168.237.41 uptime
+expect "*password" {send "123456\r"}
+expect eof
+
+动作也可以放到下一行如下：
+spawn ssh -p52113 192.168.237.41 uptime
+expect "*password"
+send "123456\n"
+expect eof
+
+也可以匹配多个表达式，需要使用{}将多个表达式括启来，并使用exp_send发送，如不是最后一个需要加exp_continue
+如下：
+spawn ssh -p52113 192.168.237.41 uptime
+expect {
+	"yes/no" {exp_send "yes\r";exp_continue}
+	"*password" {exp_send "123456\r"}
+}
+expect eof
+
+send_user命令：
+与echo -e类似，用于输出
+
+
+
+exit命令：
+与shell中的exit类似，在退出前需要做的工作
+
+
+Expect程序的变量：
+普通变量
+set 变量名 变量值
+如：
+set password "123456"
+
+puts $password       ##打印变量
+
+
+特殊变量：
+与shell中的位置一样
+[lindex $argv 0]表示$1
+[lindex $argv 1]表示$2
+[lindex $argv 2]表示$3
+$argc   表示参数的个数
+$argv0  表示脚本的名称
+
+示例：
+[tht@d03 shell]$ cat expect.exp 
+#!/usr/bin/expect
+set file [lindex $argv 0]
+set file1 [lindex $argv 1]
+set file2 [lindex $argv 2]
+set file3 [lindex $argv 3]
+send_user "$file/$file1/$file2/$file3"
+puts $argv0
+puts $argc
+
+
+
+expect中的if条件：
+if {条件表达式} {
+	指令
+} else {
+	指令
+}
+
+
+
+
+
+
+
+
+
+
+示例：
+[tht@d03 script]$ cat expect.exp 
+#!/usr/bin/expect
+spawn ssh -p52113 192.168.237.41 uptime
+expect "*password"
+send "123456\n"
+expect eof
+

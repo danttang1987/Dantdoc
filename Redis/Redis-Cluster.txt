@@ -1,0 +1,168 @@
+Redis-Cluster
+一、数据分区
+	1、数据分布
+		常见的分区规则有哈希分区和顺序分区。
+		哈希分区：离散度好、数据分布与业务无关、无法顺序访问     Redis/cassandra/dynamo
+		顺序分区:离散度易倾斜、数据分布与业务有关、可顺序访问     Bigtable/HBase/Hypertabe
+		
+		常见的哈希规则：
+			1、节点取余：使用hash(key)%节点数，来决定将数据映射到哪一个节点；
+				优点：简单，常用于数据库分库分表
+				缺点：增加节点，会导致数据重新迁移
+			2、一致性哈希分区：为系统中的每个节点分配一个token，一般为0-2 32，这些token构成一个哈希环。数据在读写执行节点查找操作时，先根据Key计算hash值，然后顺时针找到第一个大于等于该哈希值的token节点。
+				优点：在增加删除节点只影响相邻的两个节点
+				缺点：加减节点时会造成哈希环中的部分数据无法命中，需要手动处理或者忽略这部分数据。因此常用于缓存场景；
+					  当使用少量节点时，节点变化将大范围影响哈希环中的数据映射，因此不适合少量数据节点的分布式方案；
+					  普通的一致性哈希分区需 增加或减少一半的节点才能保证数据和负载的均衡。
+			3、虚拟槽分区：Redis采用这种分区方式
+	2、Redis数据分区
+		Redis Cluster采用虚拟槽分区方式，将所有键根据哈希函数映射到0-16383整数槽内，
+		特点：
+			1）解耦数据和节点之间关系，简化了节点扩容和收缩难度
+			2）节点自身维护槽的映射关系，不需要客户端或者代理服务器维护槽分区元数
+			3）支持节点、槽、键之间的映射查询，用于数据路由、在线伸缩
+			
+	3、集群功能限制
+		1）key批量操作支持有限，如mset/mget，目前只运行相同slot值的key执行批量操作
+		2）Key事务操作支持有限，只支持多个Key在同一节点上的事务操作；
+		3）Key作为数据分区的最小粒度，因此不能将一个大的键值对映射到不同的节点；
+		4）不支持多数据库空间，集群只支持一个数据库空间
+		5）复制结构只支持一层
+		
+二、搭建集群
+	搭建集群分为准备节点、节点握手、分配槽
+	1、准备节点
+		节点数量至少6个才能保证组成完整高可用的集群，每个节点需要开启cluster-enabled yes，目录和配置统一；
+		cluster-enabled yes
+		cluster-node-timeout 15000
+		cluster-config-file "node-6379.conf"
+		
+		cluster-config-file "node-6379.conf"集群配置文件自动创建，自动维护不需要手动修改；
+		
+	2、节点握手
+		握手配置：
+		cluster meet {ip} {port}
+		
+		两个节点通过发送meet、ping、pong消息完成握手
+		通过以上命令将所有节点加入到集群中，完成后集群还不能正常工作，而是处于下线状态。
+		
+	3、分配槽
+		
+		Redis集群把所有数据映射到16384个槽中，
+		通过如下命令分配槽：
+		redis-cli -h 127.0.0.1 -p 6379 cluster addslots {0...5451}
+		redis-cli -h 127.0.0.1 -p 6380 cluster addslots {5452...10992}
+		redis-cli -h 127.0.0.1 -p 6381 cluster addslots {10993...16383}
+		
+		
+		将其他没有使用的节点配置为从节点，用于复制主节点的信息和相关数据
+		redis-cli -h 127.0.0.1 -p 6382 cluster replicate <master node ID>
+		redis-cli -h 127.0.0.1 -p 6383 cluster replicate <master node ID>
+        redis-cli -h 127.0.0.1 -p 6384 cluster replicate <master node ID>
+		
+三、节点通信
+	1、通信流程
+		在分布式存储中需要提供维护节点元数信息的机制。
+		常见的元数据维护方式有：集中式和P2P方式。
+		Redis采用P2P的Gossip(流言)协议
+		通信过程说明：
+		1）集群中的每个节点都会单独开辟一个TCP通道，用于节点之间的彼此通信，通信端口在基础端口上加上10000
+		2）每个节点在固定周期内通过特定规则选择几个节点发送Ping消息
+		3）接收到Ping消息的节点用Pong消息作为响应
+		
+	2、Gossip消息
+		Gossip协议的主要职责就是信息交换
+		常见的Gossip消息可分为：Ping、Pong、meet、fail
+		meet:用于通知新节点加入。
+		ping:集群内交换最频繁的消息，集群内每个节点每秒向多个其他节点发送Ping消息，用户检测节点是否在线和交换状态信息。Ping消息发送封装了自身节点和部分其他节点的状态。
+		pong：当接收到ping/meet消息后，作为响应消息回复给发送方确认消息正常通信，Pong消息封装了自身状态数据。也可以集群广播自身状态。
+		fail:当节点判定集群内另一节点下线时会向集群内广播一个fail消息，其他节点收到消息后会把对应节点更新为下线状态。
+	3、节点选择
+		1、选择发送节点：默认每秒执行10次，每秒随机选取5个节点，找出最久没有通信的节点发送Ping消息。每100毫秒会扫描本地的节点列表。
+		
+四、集群伸缩
+	通过move slots将节点的槽和数据迁移到新的节点中
+	
+	1、扩容集群
+		1）准备新节点
+			与集群内的节点配置保持一致；
+			启动新节点
+		2）加入集群
+			在现有集群中的任意节点上执行cluster meet 命令让新节点加入
+			
+		3）迁移槽和数据
+			流程说明：
+			1：在新节点上执行cluster setslot {slot} importing {old NodeID}    让原有节点准备需要迁移的数据
+			2：在原有节点上执行cluster setslot {slot} migrating {New NodeID}}		让新节点准备接收数据
+			3：在原有节点上循环执行cluster getkeysinslot {slot} {slot}   获取count个属于{slot}的键数据
+			4：在原有节点上挂靠migrate {new NodeIP} {new NodePort} "" 0 {timeout} keys {keys..}
+			5:重复执行3和4步，直到将槽中的所有数据迁移完成；
+			6：在所有主节点上执行cluster setslot {slot} node {new nodeid}
+			
+		手动执行只为了解过程，在正式环境中建议使用redis-trib.rb
+		redis-trib.rb reshard host:port --from <arg> --to <arg> --slots <arg> --yes --timeout <arg> --pipeline <arg>
+		
+		参数说明：
+		host:port   必传参数，集群内任意节点地址
+		--from    指定原节点的ID，如有多个源节点以逗号分开
+		--to     需要迁移的目标节点ID，只能写一个
+		--slots    需要迁移槽的总数
+		--timeout    控制每次migrate操作的超时时间，默认为60000毫秒
+		--pipeline   控制每次批量迁移键的数量，默认为10.
+		
+		4）添加从节点
+		在新从节点上执行（6386）
+		redis-cli -h 127.0.0.1 -p 6386 cluster replicate <Newmaster node ID>
+		
+	2、收缩集群
+		
+		1:将下线的节点迁移到其他节点上，过程与扩展结点一样；
+		2：使用redis-trib.rb reshard命令完成槽迁移
+		redis-trib.rb reshard 127.0.0.1:6381
+		3:忘记节点
+		cluster forget {downNodeID}
+		但是在线上不建议使用cluster forget命令下线节点，建议使用redis-trib.rb del-node {host:port} {downNodeID}
+		
+五、请求路由
+	1、请求重定向
+		当客户端将命令发送给一个节点后，节点会计算是否该Key是在哪个节点上，如果在自身节点就执行，如果不在自身节点就返回moved
+		可通过cluster keyslot {key}命令返回key所对应的槽，
+		也可以通过redis-cli -c参数自动重定向。
+		
+	2、Smart客户端
+		1:smart客户端的原理：通过在内部维护slot-node的映射关系，在本地就可以实现键到节点的查找。
+
+六、故障转移
+	1、故障发现：主要有两个环节：主观下线（pfail）和客观下线（fail）
+	    当集群中的每个节点之间pong消息响应在cluster-node-timeout时间内没有收到，则会该节点标记为主观下线，
+		其他节点会通过Gossip消息传播，集群内节点不断收集故障节点的下线报告，当半数以上的持有槽的主节点都标记某个节点主观下线时，触发客观下线。
+		如客观下线在cluster-node-timeout*2时间内没有完成，下线报告将过期。
+		最后在集群内广播fail消息
+	2、故障恢复：
+		1:资格检查
+			如果从节点与主节点断线时间超过cluster-node-time * cluster-slave-validity-factor,则当前节点不具故障转移资格。
+		2：准备选举时间
+			这里通过延迟触发机制，主要是通过对多个从节点使用不同的延迟选举时间来支持优先级问题，复制偏移量越大说明从节点延迟越低。
+		3：发起选举
+			当前从节点定时任务检测达到故障选举时间（failover_auth_time）到达，发起选举流程。
+			配置纪元
+			广播选举消息（FAILOVER_AUTH_REQUEST）
+		4：选举投票
+			持有槽的主节点才会处理故障选举消息。使用主节点来进行选举。就是选举领导者的过程。
+		5：替换主节点
+		
+	3、故障转移时间
+		1：主观下线（pfail） cluster-node-timeout
+		2：主观下线状态消息传播时间<=cluster-node-timeout/2
+		3：从节点转移时间<=1000毫秒
+		
+七、集群运维
+	1、集群完整性
+		默认情况下集群16384个槽任何一个没的指派到节点，集群将不用，执行任何键命令返回(error)CLUSTEREOWN Hash slot not served错误
+		当有槽的主节点下线时，从故障发现到自动完成转移期间整个集群是不可用状态，对于大多数业务无法容忍，
+		因此建议将参数cluster-require-full-coverage配置为no
+		
+	
+	
+		
+		
