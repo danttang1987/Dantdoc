@@ -134,4 +134,121 @@ git clone git@github.com:michaelliao/gitskills.git
 
 
 
+分支创建：
+1、使用-b参数创建一个分支
+git checkout -b dev
+
+2、查看分支 *表示当前分支（可以在当前分支下修改内容并提交）
+$ git branch
+* dev
+  master
+
+3、切分支（在其他分支修改内容，交提交后切分支后无法看到）
+git checkout master
+
+git checkout dev
+
+4、切换到主分支上，合并分支
+git merge dev 
+
+5、删除分支
+ git branch -d dev
+
+
+6、当合并时有冲突可以通过git status来查看冲突，交处理后在合并。
+
+7、如果合并时需要创建一个commit，需要使用--no-ff能数禁用fast forward，并添加-m "message"
+git merge --no-ff -m "merge with no-ff" dev
+
+合并分支时，加上--no-ff参数就可以用普通模式合并，合并后的历史有分支，
+能看出来曾经做过合并，而fast forward合并就看不出来曾经做过合并
+
+8、分支管理策略
+首先，master分支应该是非常稳定的，也就是仅用来发布新版本，平时不能在上面干活；
+
+那在哪干活呢？干活都在dev分支上，也就是说，dev分支是不稳定的，到某个时候，比如1.0版本发布时，
+再把dev分支合并到master上，在master分支发布1.0版本；
+
+你和你的小伙伴们每个人都在dev分支上干活，每个人都有自己的分支，时不时地往dev分支上合并就可以了。
+
+9、存储现在的工作区
+git stash
+
+查看存储的工作区
+git stash list
+
+10、恢复工作区
+git stash pop（恢复并删除工作区）
+git stash apply stashname （只恢复不删除，需要使用git stash drop删除）
+
+
+11、强行删除分支-D参数（当创建的某个分支不需要时，如没有合并分支就要删除分支会报错的，因此需要强行删除）
+git branch -D feature-vulcan
+
+12、向远程推送分支
+git push origin master   #master为分支名
+git push origin dev   #dev为分支名
+
+
+13、克隆
+git clone git@github.com:michaelliao/gitskills.git
+默认只能克隆master分支到本地，如需要克隆dev或其他分区需要使用如下命令：
+git checkout -b dev origin/dev
+
+14、推送分支到远程，并处理冲突
+git push origin dev
+如在本地修改了dev分支与远程的dev分支冲突时会报错，并提示使用git pull命令进行合并
+在执行git pull前需要设置远程分支与本地分支的连接
+git branch --set-upstream-to=origin/dev dev
+
+git pull
+合并过程中如有冲突需要先处理冲突在commit
+git commit 
+
+完成后在推送
+git push origin dev
+
+15、将分支交叉线性化
+git rebase
+
+
+
+##标签
+
+1、切换到需要打标签的分支上。
+git checkout master
+
+2、创建标签(默认标签是打在最新提交的commit上的)
+
+git tag v1.0  (默认标签是打在最新提交的commit上的)
+
+在指定的commit上打标签
+git tag v0.9 f52c633
+
+创建带有说明的标签，用-a指定标签名，-m指定说明文字
+git tag -a v0.1 -m "version 0.1 released" 1094adb
+
+3、查看标签
+git tag
+
+查看指定的标签
+git show v0.9
+
+4、删除标签
+ git tag -d v0.1
+ 
+5、推送标签到远程
+ git push origin v1.0
+ 
+ 一次性推送所有标签到远程
+ git push origin --tags
+ 
+6、删除远程标签
+需要先删除本地的标签
+git tag -d v0.9
+
+在删除远程的标签
+git push origin :refs/tags/v0.9
+
+
 

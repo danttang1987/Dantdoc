@@ -11,3 +11,41 @@ rpm -ivh https://mirrors.aliyun.com/zabbix/zabbix/4.1/rhel/7/x86_64/zabbix-relea
 
 yum install zabbix-server zabbix-web zabbix-agent zabbix-server-mysql  zabbix-web-mysql mariadb-server mariadb -y
 
+
+systemctl start mariadb
+
+mysqladmin -uroot password '123.comm'
+
+mysql -uroot -p123.com -e "create database zabbix;grant all on zabbix to 'zabbix'@'localhost' identified by '123.comm';"
+
+zcat /usr/share/doc/zabbix-server-mysql*/create.sql.gz | mysql -uzabbix -p123.comm zabbix
+
+vim /etc/zabbix/zabbix_server.conf
+DBHost=localhost
+DBName=zabbix
+DBUser=zabbix
+DBPassword=<password>
+
+
+systemctl start zabbix-server
+
+
+
+ vim /etc/httpd/conf.d/zabbix.conf
+ 
+ php_value date.timezone Asia/Shanghai
+ 
+ 
+ vim /etc/zabbix/zabbix_agentd.conf
+ Server=192.168.237.201
+ServerActive=192.168.237.201
+Hostname=Zabbix server
+
+systemctl start zabbix-agent
+ 
+ 
+ 
+ http://192.168.237.201/zabbix/setup.php
+ 
+ 
+

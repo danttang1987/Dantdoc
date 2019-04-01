@@ -8,14 +8,50 @@ snmp
 
 {SNMP_COMMUNITY}
 
+演示Nginx自定义监控
+安装Nginx
+yum install gcc glibc gcc-c++ pcre-devel openssl-devel
 
-curl -s "http://192.168.237.200/nginx-status" | grep 'Active' | awk '{print $NF}'
+wget https://nginx.org/download/nginx-1.14.2.tar.gz
+tar xf nginx-1.14.2.tar.gz
+
+cd nginx-1.14.2
+
+./configure --user=www --group=www --prefix=/app/nginx-1.14.2/ --with-http_ssl_module  --with-http_stub_status_module
+make && make install
+
+ln -s /app/nginx-1.14.2/ /app/nginx
+
+vim /app/nginx/conf/nginx.conf
+
+include extra/nginx-status.conf;
+
+cat > /app/nginx/conf/extra/nginx-status.conf <<EOF
+    server {
+        listen       8888;
+        server_name  localhost;
+        location /nginx-status {
+            stub_status on;
+            access_log off;
+            allow 192.168.237.0/24;
+            deny all;
+        }
+    }
+EOF
+
+/app/nginx/sbin/nginx -t
+
+rpm -ivh https://mirrors.aliyun.com/zabbix/zabbix/4.1/rhel/7/x86_64/zabbix-release-4.1-1.el7.noarch.rpm
+
+yum install zabbix-agent -y
+
+curl -s "http://192.168.237.202:8888/nginx-status" | grep 'Active' | awk '{print $NF}'
 
 
 vi /etc/zabbix/zabbix-agentd.d/ngix.conf
 
 添加用户自定义参数
-UserParameter=nginx.active,/usr/bin/curl -s "http://192.168.237.200/nginx-status" | grep 'Active' | awk '{print $NF}'
+UserParameter=nginx.active,/usr/bin/curl -s "http://192.168.237.202:8888/nginx-status" | grep 'Active' | awk '{print $NF}'
 
 重启zabbix-agentd
 systemctl restart zabbix-agentd
