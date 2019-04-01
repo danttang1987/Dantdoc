@@ -1,0 +1,13 @@
+40、nginx监控
+
+1开启Nginx
+2编写脚本执行数据采集  (接收三个参数)
+3、设置用户自定义参数   UserParameter=linux_status[*],/etc/zabbix/zabbix-agent.d/linux_status.sh "$1" "$2" "$3"
+4、重启zabbix-agent   (   通过zabbix-get测试，zabbix-get -s 192.168.237.202 -k linux_status[nginx_status,8080,active]  )
+5、创建item    
+6、创建图形
+7、创建触发器
+
+8创建模板（创建item、创建图形、创建触发器）
+
+

@@ -1,0 +1,17 @@
+35、zabbix基础讲解
+
+设置map标签的lab
+
+{nginx01:net.if.out[eth0].last(0)}
+{主机名:Key.方法}
+
+
+1、怎么通知   Action
+
+2、什么情况下通知  condition
+
+4通过什么途径发送
+
+5发送给谁
+
+6通知升级

@@ -1,0 +1,44 @@
+39、Nginx监控jmx
+
+	主机分组：
+		交换机
+		Nginx
+		comcat
+		mysql
+		
+	监控内容：
+		snmp监控交换机
+		使用IPMI监控服务器硬件
+		使用Agent监控
+		使用JMX监控java
+		监控mysql
+		监控web
+		监控nginx
+		
+	
+	
+IPMI：建议，使用自定义Item,使用ipmi-tool本地获取
+
+
+JMX：需要安装java gateway
+	yum install -y zabbix-java-gateway java-1.8.0
+
+	vim /etc/zabbix/zabbix-java-gateway.conf
+	
+	systemctl start zabbix-java-gateway
+	
+	vim /etc/zabbix/zabbix_server.conf
+
+		# JavaGateway=	
+		# JavaGatewayPort=10052
+		# StartJavaPollers=0
+	重启zabbic-server
+	
+	
+	安装comcat
+	配置comcat jmx远程监控。
+	
+	在zabbix上添加JMX
+	
+	
+	
