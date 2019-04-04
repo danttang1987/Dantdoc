@@ -1,0 +1,31 @@
+45、Zabbix监控模式
+
+1、监控主机多，性能跟不上，延迟大，查看队列
+
+2、多机房、防火墙
+
+zabbix解决以上问题
+
+	针对Agent的来说：
+	1、被动模式
+	2、主动模式
+	
+		当监控主机超过300+，建议使用主动模式。
+		队列没有大量延时的
+		
+		修zabbix-agent.conf
+		StartAgent=0
+		ServerActive=zabbixserver
+		Hostname=FQDN
+	3、克隆模板
+	4、批量修改模板中的监控类型（确认所有item都为主动，如有Link需要取消或将Link的模板也改为主动）
+	5、添加主机
+	
+	注：新版本需要配置DNS解析，否则在主动模式下无法正常获取数据
+	Agent端的日志如下：
+	active check configuration update from [192.168.237.201:10051] started to fail (ZBX_TCP_READ() timed out)
+	
+	server端的日志如下：
+	 cannot send list of active checks to "192.168.237.202": host [nginx01] not found
+
+		

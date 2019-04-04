@@ -1,0 +1,41 @@
+47、自动化监控
+
+1、自动注册
+	1.1 Zabbix自动添加
+		1)、修改Agent配置文件
+		配置为主动模式，并添加hostMetadata
+		HostMetadataItem=system.uname
+		2）、配置zabbixweb,创建Action,自动注册的Action
+		Conditions   （	Host metadata contains Linux）
+		Operations
+			Add host
+			Add to host groups: G-nginx-active
+			Link to templates: Template OS Linux_active
+		3）、启动Agent
+		
+
+
+2、主动发现
+	2.1 自动发现 discover
+		2.在Agent中将配置改为被动
+		1.configuration---discover
+		
+		
+	2.2 zabbix api
+	
+	curl -s -X post -H "Content-Type:application/json" -d '
+	
+	' http://192.168.237.201/zabbix/ | python -m json.tool
+	
+	
+	
+	
+	
+	
+	
+	
+	
+
+
+
+

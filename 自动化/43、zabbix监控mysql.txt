@@ -1,0 +1,16 @@
+43、zabbix监控mysql
+
+生产中建议使用percona的脚本进行监控
+
+percona monitoring plugins for zabbix
+
+1、安装yum仓库
+2、安装模板文件 yum install -y percona-zabbix-templates php php-mysql
+
+	php脚本:采集数
+	shell脚本：调用php脚本
+	zabbix-agent配置文件
+	zabbix模板文件
+	
+		创建Zabbix监控专用用户
+

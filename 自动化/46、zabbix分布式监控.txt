@@ -1,0 +1,19 @@
+46、zabbix分布式监控
+
+1、安装zabbix-proxy
+yum install zabbix-proxy zabbix-proxy-mysql mariadb-server
+systemctl start mariadb
+
+2、配置数据库
+mysqladmin -uroot password '123.com'
+mysql -uroot -p123.com -e "create database zabbix-proxy character set utf8;"
+mysql -uroot -p123.com -e "grant all on zabbix-proxy.* to 'zabbix-proxy'@'localhost' identified by '123.com';"
+zcat /usr/share/doc/zabbix-prosy-mysql/schema.sql.gz | mysql -uzabbix-proxy -p123.com zabbix-proxy
+
+3、配置/etc/zabbix/zabbix-proxy.conf
+启动zabbix-proxy
+
+4、在zabbixweb上的administrator中添加
+
+5、将主机改为zabbix-proxy
+

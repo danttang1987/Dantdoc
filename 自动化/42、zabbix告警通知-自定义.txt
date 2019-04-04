@@ -1,0 +1,16 @@
+42、zabbix告警通知-自定义
+
+1、编写告警脚本（脚本接收三个参数）
+
+2、将告警脚本放到下面目录中：
+
+/usr/lib/zabbix/alertscripts
+
+
+3、在zabbix上添加
+	1、添加告警媒介，选择script类型，输入脚本名称、添加三个参数、
+	2、修改Action   
+		优化Action中的报警信息（Host: {HOST.NAME}:{ITEM.KEY1}:{ITEM.VALUE1}）
+	3、为用户添加告警媒介
+
+建议：将发送的日志记录到日志文件
