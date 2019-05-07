@@ -1,0 +1,50 @@
+119、ELKStack-使用消息队列扩展
+
+流程：
+
+数据-----》logstash(可选其他)------>Redis（kafka/rabbitmq）------> logstash(可选其他) ----->elasticsearch
+
+
+
+##从文件中读取，存储在redis中
+input {
+    file {
+        path => "/var/log/httpd/access_log"
+        start_position => "beginning"
+    }
+}
+output {
+    redis {
+        host => "192.168.237.22"
+        port => "6380"
+        db => "2"
+        data_type => "list"
+        key => "apache-log"
+    }
+}
+
+
+#######################################
+
+
+#从redis中读取并格式化后，存储在es中
+input {
+    redis {
+        host => "192.168.237.22"
+        port => "6380"
+        db => "2"
+        data_type => "list"
+        key => "apache-log"
+    }
+}
+filter {
+      grok {
+          match => { "message" => "%{HTTPD_COMBINEDLOG}" }
+      }
+}
+output {
+    elasticsearch {
+        hosts => ["192.168.237.208"]
+        index => "apache-access-log-redis-%{+YYYY.MM.dd}"
+    }
+}

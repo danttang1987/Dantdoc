@@ -1,0 +1,37 @@
+75、salt-job管理
+
+查看正在运行的的job
+
+salt '*' saltutil.running
+
+salt-master:
+    |_
+      ----------
+      arg:
+      fun:
+          state.highstate
+      jid:
+          20190420102645650057
+      pid:
+          16347
+      ret:
+      tgt:
+          *
+      tgt_type:
+          glob
+      user:
+          root
+nginx01.zishan.com:
+
+
+#####################################
+
+当需要结束某个job时可以使用如下：
+
+salt '*' saltutil.kill_job 20190420102645650057     #####jobid
+
+
+
+
+
+

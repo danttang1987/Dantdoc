@@ -1,0 +1,106 @@
+51、saltstack快速入门-配置管理
+
+stat模块管理配置，需要写一个文件，YAML的文件,后缀为.sls
+
+文档
+www.unixhost.com/docks/saltstack/
+
+
+YAML介绍：
+
+host:
+  faily:
+    - list1
+	- list2
+	- list3
+  tel: 1234566
+  
+关键点：
+1、缩进：两个空格，不能使用Tab
+2、冒号：缩进与冒号接合，表示层级关系；冒号后加空格表示Key: value
+3、短横线：列表，中间有空格
+
+
+修改Master配置文件
+配置state模块的配置文件存储位置
+
+vim /etc/salt/master
+
+file_roots:
+  base:
+    - /srv/salt/
+  dev:
+    - /srv/salt/dev/
+  prod:
+    - /srv/salt/prod/
+	
+注：可以配置多个环境。如开发、生产、测试、基础（是必须的）
+
+systemctl restart salt-master
+
+mkdir /srv/salt -p
+
+mkdir /srv/salt/web
+cd /srv/salt/web
+vim apache.sls
+
+apache-install:
+  pkg.installed:
+    - names:
+	  - httpd
+	  - httpd-devel
+
+apache-service:
+  service.running:
+    - name: httpd
+    - enable: True
+
+
+执行状态配置：
+salt '*' state.sls web.apache
+
+web.apache与这个对应/srv/salt/web/apache.sls
+
+执行配置后，master将把apache.sls传给minion，并存储在/var/cache/salt/minion/files/base/web/apache.sls
+
+
+状态配置高级使用：
+修改Master配置文件：定义topfile，默认：“state_top: top.sls”  topfile放在base环境下，所有环境都用一个topfile
+
+vim /srv/salt/top.sls
+
+base:
+  'nginx01.zishan.com':
+    - web.apache
+  'nginx02.zishan.com':
+    - web.apache
+
+注:
+base：是环境名称
+nginx02.zishan.com：匹配的minion ID
+
+执行高级状态：
+salt '*' state.highstate
+
+注：在生产中需要先测试，不能使用*
+salt '*' state.highstate test=True
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

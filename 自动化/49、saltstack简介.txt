@@ -1,0 +1,39 @@
+49、saltstack简介
+
+
+三大功能：
+	远程执行
+	配置管理（状态）
+	云管理
+
+
+四种运行方式：
+	Local
+	Minion/Master
+	Syndic
+	Salt SSH
+	
+典型案例：
+	
+
+安装：
+1、安装yum源 repo.saltstack.com
+rpm -ivh https://repo.saltstack.com/yum/redhat/salt-repo-latest.el7.noarch.rpm
+
+2、安装 
+yum install -y salt-master salt-minion
+
+3、启动master
+systemctl stasrt salt-master
+
+4、修改minion配置文件
+vi /etc/salt/minion
+master: FQDN or IP
+id: (默认是fqdn,salt的唯一ID)
+systemctl start salt-minion
+
+启动后将生成minion.id文件,此文件不会在更改了
+/etc/salt/minion.id
+
+
+

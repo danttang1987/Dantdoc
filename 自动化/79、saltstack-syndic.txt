@@ -1,0 +1,23 @@
+79、saltstack-syndic
+
+syndic，可以理解成一个代理：
+他必须运行在一个master上； 
+他必须连接一个更高级的master; 
+
+1、修改syndic的master配置中的syndic_master: *.*.*.*  更高级的master地址
+2、重启master
+
+
+3、在更高级的master中修改配置文件：order_masters: True
+
+
+更高级的master无法知道syndic下有多少个minion
+
+
+
+
+
+
+
+
+

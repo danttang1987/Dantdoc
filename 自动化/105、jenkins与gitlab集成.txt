@@ -1,0 +1,19 @@
+105、jenkins与gitlab集成
+
+1、安装三个插件：
+Build Authorization Token Root Plugin
+Gitlab Hook Plugin	
+GitLab Plugin
+
+
+2、配置job中的构建触发器
+
+触发远程构建（设置一个token）
+Build when a change is pushed to GitLab. GitLab webhook URL: http://192.168.237.205:8080/project/web-sonar
+
+
+3、在gitlab中配置webhook
+    1、gitlab的处理域————settings————network————Outbound requests————选择“Allow requests to the local network from hooks and services”
+	2、进行一个project————settings————Integrations————设置一个URL如下
+	http://192.168.237.205:8080/buildByToken/build?job=web-sonar&token=a909fc909b6420752e87
+	选择Trigger   Push events

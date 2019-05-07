@@ -1,0 +1,69 @@
+54、saltstack数据系统-pillar
+
+pillar数据是动态的，需要给特定的minion指定特定的数据。只有指定的minion能看到自己的数据。
+
+
+用于：
+	用于敏感数据
+	
+查看pillar:
+
+	salt '*' pillar.items
+
+默认有一些，但是关闭状态，不显示，可通过修改master配置文件中的pillar_opts: True
+
+定义pillar数据，需要写一个sls文件。
+
+piller_roots  top file
+
+
+指定piller的路径：
+vim /etc/salt/master
+pillar_roots:
+  base:
+    - /srv/pillar
+	
+	
+重启master
+
+1、写sls
+mkdir /srv/pillar/web -p
+
+cd /srv/pillar/web
+vim apache.sls
+{% if grains['os'] == 'CentOS' %}
+apache: httpd
+{% elif grains['os'] == 'Debian' %}
+apache: apache2
+{% endif %}
+
+2、写topfile，必须写
+vim /srv/pillar/top.sls
+base:
+  'linux.zishan.com':
+    - web.apache
+
+
+3、同步
+salt '*' saltutil.refresh_pillar
+
+
+4、查看
+
+salt '*' pillar.item apache
+
+
+
+pillar 使用场景：
+	1、用于目标选择 salt -I 'apache:httpd' cmd.run 'systemctl start httpd'
+
+
+
+ 
+
+
+	
+
+
+
+

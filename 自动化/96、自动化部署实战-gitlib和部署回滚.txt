@@ -1,0 +1,34 @@
+96、自动化部署实战-gitlib和部署回滚
+
+
+yum install curl policycoreutils openssh-server openssh-clients postfix
+systemctl start postfix
+
+curl -sS https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.rpm.sh | sudo bash
+
+yum install -y gitlab-ce
+
+也可以使用国内的源
+[root@linux-node2 ~]# vim /etc/yum.repos.d/gitlab-ce.repo
+[gitlab-ce]
+name=gitlab-ce
+baseurl=http://mirrors.tuna.tsinghua.edu.cn/gitlab-ce/yum/el7
+repo_gpgcheck=0
+gpgcheck=0
+enabled=1
+gpgkey=https://packages.gitlab.com/gpg.key
+[root@linux-node2 ~]# yum makecache
+[root@linux-node2 ~]# yum install gitlab-ce
+
+
+gitlab-ctl reconfigure
+
+
+gitlab-ctl status
+gitlab-ctl start
+gitlab-ctl stop
+gitlab-ctl restart
+
+vim /etc/gitlab/gitlab.rb
+
+external_url 'http://192.168.237.204'

@@ -1,0 +1,79 @@
+123、ELKStack-filebeat02
+
+filebeat ----->  redis ---->  logstash ------->  es
+
+filebeat配置文件：
+[root@web01 filebeat]# cat filebeat.yml
+filebeat.inputs:
+  - type: log
+    paths:
+      - /var/log/httpd/access_log
+      - /var/log/messages
+output.redis:
+  hosts: ["192.168.237.22:6380"]
+  key: "filebeat-default"
+  db: 3
+  timeout: 5
+  keys:
+    - key: "fi-http-access"
+      when.equals:
+        log.file.path: "/var/log/httpd/access_log"
+    - key: "fi-syslog"
+      when.equals:
+        log.file.path: "/var/log/messages"
+  
+  
+##############################################
+
+
+logstash配置文件：
+
+[root@es01 conf.d]# cat beats-redis.conf 
+input {
+    redis {
+        host => "192.168.237.22"
+        port => "6380"
+        db => "3"
+        data_type => "list"
+        key => "fi-http-access"
+        type => "fi-http-access"
+    }
+    redis {
+        host => "192.168.237.22"
+        port => "6380"
+        db => "3"
+        data_type => "list"
+        key => "fi-syslog"
+        type => "fi-syslog"
+    }
+}
+filter {
+    if [type] == "fi-http-access" {
+      grok {
+          match => { "message" => "%{HTTPD_COMBINEDLOG}" }
+      }
+    }
+}
+output {
+    if [type] == "fi-http-access" {
+    elasticsearch {
+        hosts => ["192.168.237.208"]
+        index => "filebeat1-httpd-%{+YYYY.MM.dd}"
+    }
+    }
+    
+    if [type] == "fi-syslog" {
+    elasticsearch {
+        hosts => ["192.168.237.208"]
+        index => "filebeat1-syslog-%{+YYYY.MM.dd}"
+    }
+    }
+}
+
+
+
+
+
+
+
+

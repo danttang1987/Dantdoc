@@ -1,0 +1,33 @@
+111、ELK-logstash-if
+
+[root@es01 ~]# cat /etc/logstash/conf.d/es-log.conf 
+input {
+    file {
+        path => ["/var/log/messages","/var/log/secure"]
+        start_position => "beginning"
+        type => "system-log"
+    }
+    file {
+        path => ["/var/log/elasticsearch/my-escluster.log"]
+        start_position => "beginning"
+        type => "es-log"
+    }
+}
+filter {
+
+}
+
+output {
+    if [type] == "system-log" {
+        elasticsearch {
+            hosts => ["192.168.237.208"]
+            index => "system-log-%{+YYYY.MM}"
+        }
+    }
+    if [type] == "es-log" {
+        elasticsearch {
+            hosts => ["192.168.237.208"]
+            index => "es-log-%{+YYYY.MM}"
+        }
+    }
+}

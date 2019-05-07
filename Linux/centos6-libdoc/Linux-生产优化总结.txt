@@ -57,7 +57,7 @@ echo "123456"|passwd --stdin tht && history -c
 cat >> /etc/profile <<EOF
 export HISTTIMEFORMAT="%F %T"hos
 export HISTCONTROL=ignorespace
-export TMOUT=10
+export TMOUT=60
 EOF
 cp /etc/sudoers{,.ori}
 echo "tht ALL=(ALL) NOPASSWD: ALL ">>/etc/sudoers
@@ -75,9 +75,13 @@ rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY*
 yum  upgrade -y  #更新内核
 yum  update -y   #更新软件
 yum install tree nmap sysstat lrzsz dos2unix -y
+
+
 echo '*/5 * * * * /usr/sbin/ntpdate time.windows.com >/dev/null 2 >&1' >>/var/spool/cron/root
 echo '*/10 * * * * /usr/sbin/ntpdate time.nist.gov >/dev/null 2>&1' >>/var/spool/cron/root
 ##禁用不需要的服务
+
+
 for sun in `chkconfig --list|grep 3:on|awk '{print $1}'`;do chkconfig --level 3 $sun off;done
 for sun in crond rsyslog sshd network;do chkconfig --level 3 $sun on;done
 chkconfig --list|grep 3:on

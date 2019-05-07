@@ -1,0 +1,28 @@
+115、ELKStack-logstash-syslog
+
+1、在系统配置中设置，514端口
+
+vim /etc/rsyslog.conf 
+*.* @@192.168.237.207:514
+systemctl restart rsyslog
+
+
+input {
+    syslog {
+        type => "syslog"
+        port => 514
+    }
+}
+output {
+    elasticsearch {
+        hosts => ["192.168.237.207:9200"]
+        index => "system-rsyslog-%{+YYYY.MM}"
+    }
+
+}
+
+
+
+
+
+

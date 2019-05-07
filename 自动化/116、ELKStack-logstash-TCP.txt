@@ -1,0 +1,28 @@
+116、ELKStack-logstash-TCP
+
+
+input {
+    tcp {
+        type => "TCP"
+        port => "6666"
+        mode => "server"
+    }
+}
+output {
+    stdout {
+        codec => rubydebug
+    }
+}
+
+测试：
+ echo hehe |nc 192.168.237.207 6666 
+ 
+ nc 192.168.237.207 6666 < /app/nginx/logs/access.log
+ 
+ echo hehe > /dev/tcp/192.168.237.207/6666
+
+
+
+
+
+

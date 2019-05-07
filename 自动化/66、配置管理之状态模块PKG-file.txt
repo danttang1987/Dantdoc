@@ -1,0 +1,128 @@
+66-67、配置管理之状态模块PKG-file-service
+
+状态的两个特点：
+1、状态不可回滚
+2、状态可重复执行
+
+
+apache-install:   #名称声明或ID声明,（默认是Name声明）ID必须维一
+  pkg.installed:  #模块声明
+    - names:      #选项/参数
+      - httpd
+
+apache-install: 
+  pkg.installed:
+    - names:
+      - httpd
+
+
+php:
+  pkg.installed	  
+  
+  
+  
+示例：LAMP架构部署
+
+1、安装软件包        pkg
+	pkg.installed:     #安装 
+	  - pkgs           #同时安装多个包
+	pkg.group_installed
+	pkg.latest
+	pkg.removed
+	pkg.purged      #卸载就删除配置文件
+2、修改配置文件      file
+	file.managed:
+	  source: 
+
+3、启动服务         service
+
+一个ID声明下不能重复使用一个状态模块。
+mkdir /srv/salt/lamp/files -p
+将httpd/mysql/php配置文件复制到/srv/salt/lamp/files
+
+vim /srv/salt/lamp/lamp.sls
+##################################
+lamp-pkg:
+  pkg.installed:
+    - pkgs:
+	  - httpd
+	  - php
+	  - mariadb
+	  - mariadb-server
+	  - php-mysql
+	  - php-cli
+	  - php-mbstring
+
+apache-config:
+  file.managed:
+    - name: /etc/httpd/conf/httpd.conf
+	- source: salt://lamp/files/httpd.conf
+	- user: root
+	- group: root
+	- mode: 644
+
+	
+php-config:
+  file.managed:
+    - name: /etc/php.ini
+	- source: salt://lamp/files/php.ini
+	- user: root
+	- group: root
+	- mode: 644
+	
+mysq-config:
+  file.managed:
+    - name: /etc/my.cnf
+	- source: salt://lamp/files/my.cnf
+	- user: root
+	- group: root
+	- mode: 644	
+
+apache-service:
+  service.running:
+    - name: httpd
+    - enable: True
+	- reload: True
+
+mysql-service:
+  service.running:
+    - name: mariadb
+    - enable: True
+    - reload: True	
+
+##############################
+
+
+执行：
+salt '*' state.sls lamp.lamp
+
+#################################
+注：
+salt://  表示当前环境的根目录  如：
+files_roots:
+  base:
+    - /srv/salt
+
+salt://lamp/files/my.cnf 表示 /srv/salt/lamp/files/my.cnf）
+
+  file.managed:
+	- check_cmd:         #用于通过命令验证文件内容是否正常确认，如命令返回0则状态成功，否则状态失败
+	- backup: minion     #在应用状态前备份minion的该文件，备份路径为 /var/cache/salt/minion/file_backup/
+
+优化：
+可以按服务器写
+apache-service:
+  pkg.installed:
+    - pkgs:
+	  - httpd
+	  - httpd-devel
+	  - php
+	  - php-mysql
+	  - php-cli
+	  - php-mbstring
+  file.managed:
+    - name: 
+
+
+
+

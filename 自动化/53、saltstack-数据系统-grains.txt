@@ -1,0 +1,105 @@
+53、saltstack-数据系统-grains
+
+两种数据系统：
+	grains
+	pillar
+	
+grains：静态数据，当minion启动时收集的Minion本地的信息。
+				如：操作系统版本/主机名/ip/内核版本/硬盘/CPU/内存
+		
+	作用：
+		1、信息查询。资产管理
+		2、用于目标选择
+		3、配置管理中使用
+
+
+查看grains:
+
+	列出grains的Key
+	salt 'linux01' grains.ls
+
+	列出grains的value
+	salt 'linux01' grains.items
+
+	列出某一个key的值
+	salt 'linux01' grains.item os
+
+使用grains做目的选择:
+
+	salt -G 'os:CentOS' cmd.run 'w'
+
+在topfile中使用grains：
+	
+'rolse:apache':
+  - match: grain
+  - web.apache
+  
+配置管理：
+vim /srv/salt/web/apache.sls
+
+先不讲
+
+
+
+	
+自定义grains：
+方法一：在minion配置文件中定义；
+	vim /etc/salt/minion
+	
+grains:
+  roles: apache
+
+应用：salt -G 'roles:apache' cmd.run 'systemctl restart httpd'
+  
+方法二：
+vim /etc/salt/grains
+cloud: openstack
+
+让grains生效两种方式:
+	salt '*' saltutil.sync_grains
+	重启minion
+
+#####################################################
+开发一个grains:
+在master上使用python自定义grains:
+
+使用Python脚本，返回一个字典就可以了。
+
+在base环境下创建一个_grains目录：
+cd /srv/salt
+mkdir _grains
+
+vim my_grains.py
+
+#!/usr/bin/env python
+#-*- coding: utf-8 -*-
+
+def my_grains():
+   grains = {}
+   grains['iaas'] = 'openstack'
+   grains['edu'] = 'zishan'
+   return grains
+ 
+ 
+同步grains: 
+salt '*' saltutil.sync_grains
+
+同步后存储在：
+/var/cache/salt/minion/extmods/grains/
+
+grain优先级：
+	1、系统自带
+	2、grains文件中
+	3、minion文件中
+	4、自己定义开发的
+	
+
+   
+
+
+
+
+
+
+
+

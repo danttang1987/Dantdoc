@@ -1,0 +1,86 @@
+57、saltstack远程执行-返回
+
+Returners
+
+返回到mysql,是minion返回到mysql数据库存
+
+1、安装mysql-python
+
+salt '*' state.single pkg.installed name=MySQL-python
+
+
+
+
+2、创建数据库，并授权
+mysql
+create database saltdb character set utf8;
+grant all on saltdb.* to 'salt'@'192.168.237.%' identified by '123.com';
+use saltdb;
+
+--
+-- Table structure for table `jids`
+--
+
+DROP TABLE IF EXISTS `jids`;
+CREATE TABLE `jids` (
+  `jid` varchar(255) NOT NULL,
+  `load` mediumtext NOT NULL,
+  UNIQUE KEY `jid` (`jid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+CREATE INDEX jid ON jids(jid) USING BTREE;
+
+--
+-- Table structure for table `salt_returns`
+--
+
+DROP TABLE IF EXISTS `salt_returns`;
+CREATE TABLE `salt_returns` (
+  `fun` varchar(50) NOT NULL,
+  `jid` varchar(255) NOT NULL,
+  `return` mediumtext NOT NULL,
+  `id` varchar(255) NOT NULL,
+  `success` varchar(10) NOT NULL,
+  `full_ret` mediumtext NOT NULL,
+  `alter_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  KEY `id` (`id`),
+  KEY `jid` (`jid`),
+  KEY `fun` (`fun`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Table structure for table `salt_events`
+--
+
+DROP TABLE IF EXISTS `salt_events`;
+CREATE TABLE `salt_events` (
+`id` BIGINT NOT NULL AUTO_INCREMENT,
+`tag` varchar(255) NOT NULL,
+`data` mediumtext NOT NULL,
+`alter_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+`master_id` varchar(255) NOT NULL,
+PRIMARY KEY (`id`),
+KEY `tag` (`tag`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+
+3、修改minion配置文件
+return:
+  - mysql
+#  - hipchat
+#  - slack
+mysql.host: '192.168.237.203'
+mysql.port: 3306
+mysql.user: 'salt'
+mysql.pass: '123.com'
+mysql.db: 'saltdb
+
+重启minion
+
+
+
+执行：
+salt '*' test.ping --return mysql
+
+
+

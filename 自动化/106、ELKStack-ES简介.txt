@@ -1,0 +1,122 @@
+106、ELKStack-ES简介
+
+ELKStack是三个开源软件的组合（elasticsearch+logstash+Kibana）
+
+elasticsearch（存储）
+logstash（日志收集）
+Kibana（日志的分析展示）
+
+
+elasticsearch安装
+
+yum install java -y
+
+rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch
+
+
+cat >>/etc/yum.repos.d/elasticsearch-7.repo <<EOF
+[elasticsearch-7.x]
+name=Elasticsearch repository for 7.x packages
+baseurl=https://artifacts.elastic.co/packages/7.x/yum
+gpgcheck=1
+gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
+enabled=1
+autorefresh=1
+type=rpm-md
+EOF
+
+yum install elasticsearch
+yum install logstash
+yum install kikana
+
+
+
+es配置：
+[root@es01 elasticsearch]# pwd
+/etc/elasticsearch
+[root@es01 elasticsearch]# cat elasticsearch.yml | grep ^[a-Z]
+cluster.name: my-escluster
+node.name: es01
+path.data: /data/es-data
+path.logs: /var/log/elasticsearch
+network.host: 192.168.237.207
+http.port: 9200
+discovery.seed_hosts: ["192.168.237.207"]
+cluster.initial_master_nodes: ["192.168.237.207"]
+
+mkdir /data/es-data -p
+chown elasticsearch.elasticsearch /data/es-data
+
+启动：
+/etc/init.d/elasticsearch start
+
+
+验证:
+netstat -lntup | grep 9200
+tcp6       0      0 192.168.237.207:9200    :::*                    LISTEN      7801/java 
+
+http://192.168.237.207:9200/
+{
+  "name" : "es01",
+  "cluster_name" : "my-escluster",
+  "cluster_uuid" : "mmpKp6f8SLqBM7WtQxrUbw",
+  "version" : {
+    "number" : "7.0.0",
+    "build_flavor" : "default",
+    "build_type" : "rpm",
+    "build_hash" : "b7e28a7",
+    "build_date" : "2019-04-05T22:55:32.697037Z",
+    "build_snapshot" : false,
+    "lucene_version" : "8.0.0",
+    "minimum_wire_compatibility_version" : "6.7.0",
+    "minimum_index_compatibility_version" : "6.0.0-beta1"
+  },
+  "tagline" : "You Know, for Search"
+}
+
+插件安装：
+mobz/elasticsearch-head     Release for compatibility with elasticsearch 5.x
+lukas-vlcek/bigdesk
+lmenezes/elasticsearch-kopf
+
+
+
+状态api
+
+curl -i -XGET 'http://192.168.237.207:9200/_count?'
+curl -i -XGET 'http://192.168.237.207:9200/_cluster/stats?pretty=true'
+curl -i -XGET 'http://192.168.237.207:9200/_cluster/health?pretty=true'
+
+curl -i -XGET 'http://192.168.237.207:9200/_stats'
+curl -i -XGET 'http://192.168.237.207:9200/_ml/anomaly_detectors/_stats'
+curl -i -XGET 'http://192.168.237.207:9200/_nodes/_local/stats'
+curl -i -XGET 'http://192.168.237.207:9200/index-demo/_stats'
+
+写数据（Document APIs）：
+
+curl -X PUT "http://192.168.237.207:9200/index-demo/_doc/1" -H 'Content-Type: application/json' -d '
+{
+    "user" : "kimchy",
+    "post_date" : "2009-11-15T14:12:12",
+    "message" : "trying out Elasticsearch"
+}
+'
+
+
+searchAPI
+
+搜索twitter index中的user:kimchy
+curl -i -XGET 'http://192.168.237.207:9200/index-demo/_search?q=user:kimchy'
+
+curl -i -XGET 'http://192.168.237.207:9200/logstash-*/_search
+
+搜索多个 index中的user:kimchy
+GET /kimchy,elasticsearch/_search?q=tag:wow
+
+
+catAPI
+
+详细看
+
+
+

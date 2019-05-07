@@ -1,0 +1,31 @@
+80、saltstack-ssh
+
+1、安装
+yum install -y salt-ssh
+
+
+2、要配置一个花名册
+vim /etc/salt/roster
+
+linux-node1.zishan.com:
+  host: 192.168.237.203
+  user: root
+  port: 22
+  
+linux-node2.zishan.com:
+  host: 192.168.237.201
+  user: root
+  port: 22
+
+
+
+salt-ssh '*' test-ping -i
+
+
+salt-ssh '*' -r 'w'
+
+目标选择只支持对ID选择
+
+cd /home/user/.ssh/config
+
+StricHostKeyChecking no

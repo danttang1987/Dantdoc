@@ -1,0 +1,61 @@
+111、ELKStack-logstash-multiline
+多行操作，将多行日志合并成一行
+
+学习测试，先用标准输入和标准输出测试验证。
+[root@es01 conf.d]# cat test.conf 
+input {
+    stdin {
+        codec => multiline {
+            pattern => "^\["
+            negate => true
+            what => "previous"
+        }
+    }
+
+}
+
+output {
+    stdout {
+        codec => rubydebug
+    }
+}
+
+
+
+
+java日志用户例，将多行合并成一行
+input {
+    file {
+        path => ["/var/log/messages","/var/log/secure"]
+        start_position => "beginning"
+        type => "system-log"
+    }
+    file {
+        path => ["/var/log/elasticsearch/my-escluster.log"]
+        start_position => "beginning"
+        type => "es-log"
+		codec => multiline {
+		    pattern => "^["
+			negate => 
+			
+		}
+    }
+}
+filter {
+
+}
+
+output {
+    if [type] == "system-log" {
+        elasticsearch {
+            hosts => ["192.168.237.208"]
+            index => "system-log-%{+YYYY.MM}"
+        }
+    }
+    if [type] == "es-log" {
+        elasticsearch {
+            hosts => ["192.168.237.208"]
+            index => "es-log-%{+YYYY.MM}"
+        }
+    }
+}

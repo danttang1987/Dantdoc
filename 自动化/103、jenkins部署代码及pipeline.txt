@@ -1,0 +1,33 @@
+103、jenkins部署代码及pipeline
+
+jenkins部署代码可以通过执行shell方式完成
+
+1、新建一个job——配置，在"构建"中选择"执行shell"
+
+sudo ssh www@192.168.237.211 "./deploy.sh deploy"
+
+并在jenkins中配置root的ssh-key和sudo权限，认jenkins用户可以执行ssh命令。
+jenkins ALL=(ALL)       NOPASSWD: /usr/bin/ssh
+
+
+
+
+将sonar的job与deploy的job关联
+sonar job完成代码的检查后进行部署到测试环境。
+
+
+1、需要安装一个插件“Parameterized Trigger plugin”
+2、在sonar的job的配置中设置“构建后操作”——选择Trigger Parameterized build on other project——设置job名称——并选择“Trigger build without parameters ”
+
+
+配置pipeline
+1、安装pipeline脚本Build Pipeline Plugin
+
+2、新建一个视图-----命名-----选择job(Upstream / downstream config)----设置显示的（No Of Displayed Builds）
+
+
+
+
+
+ 
+

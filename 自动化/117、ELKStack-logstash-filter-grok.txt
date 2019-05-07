@@ -1,0 +1,53 @@
+117、ELKStack-logstash-filter-grok
+
+利用正则表达式将日志进行格式化
+
+logstash正则表达式库
+
+/usr/share/logstash/vendor/bundle/jruby/2.5.0/gems/logstash-patterns-core-4.1.2/patterns
+
+
+
+input {
+    stdin {   
+    }
+}
+
+filter {
+      grok {
+          match => { "message" => "%{IP:client} %{WORD:method} %{URIPATHPARAM:request} %{NUMBER:bytes} %{NUMBER:duration}" }
+      }
+}
+output {
+        stdout {
+            codec => rubydebug
+        }
+}
+
+
+#将apache文件格式化后存储在es中
+
+input {
+    file {
+        path => "/var/log/httpd/access_log"
+        start_position => "beginning"
+    }
+}
+
+filter {
+      grok {
+          match => { "message" => "%{HTTPD_COMBINEDLOG}" }
+      }
+}
+output {
+    elasticsearch {
+        hosts => ["192.168.237.207"]
+        index => "apache-access-log-%{+YYYY.MM.dd}"
+    }
+}
+
+
+
+
+
+

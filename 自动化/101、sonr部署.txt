@@ -1,0 +1,93 @@
+101、sonr部署
+sonr用于分析代码质量
+
+[root@linux-node2 ~]# yum install -y java-1.8.0
+[root@linux-node2 ~]# cd /usr/local/src
+
+####
+##sonar5.6.7以上版本需要使用mysql5.6以上版本
+##
+# wget https://sonarsource.bintray.com/Distribution/sonarqube/sonarqube-5.6.zip
+[root@linux-node2 src]# unzip sonarqube-5.6.zip
+[root@linux-node2 src]# mv sonarqube-5.6 /usr/local/
+[root@linux-node2 src]# ln -s /usr/local/sonarqube-5.6/ /usr/local/sonarqube
+
+
+
+mysql> CREATE DATABASE sonar CHARACTER SET utf8 COLLATE utf8_general_ci;
+mysql> GRANT ALL ON sonar.* TO 'sonar'@'localhost' IDENTIFIED BY 'sonar@pw';
+mysql> GRANT ALL ON sonar.* TO 'sonar'@'%' IDENTIFIED BY 'sonar@pw';
+mysql> FLUSH PRIVILEGES;
+
+[root@linx-node2 ~]# cd /usr/local/sonarqube/conf/
+[root@linx-node2 conf]# ls
+sonar.properties  wrapper.conf
+
+
+
+[root@linx-node2 conf]# vim sonar.properties
+sonar.jdbc.username=sonar
+sonar.jdbc.password=sonae@pw
+sonar.jdbc.url=jdbc:mysql://localhost:3306/sonar?useUnicode=true&characterEncoding=utf8&rewriteBatchedStatements=true&useConfigs=maxPerformance
+
+
+[root@linx-node2 conf]# vim sonar.properties
+sonar.web.host=0.0.0.0
+sonar.web.port=9000
+[root@linx-node2 ~]# /usr/local/sonarqube/bin/linux-x86-64/sonar.sh start
+
+
+##sonar插件安装位置
+
+/usr/local/sonarqube/extensions/plugins
+
+访问：
+http://192.168.237.206:9000/
+admin
+admin
+
+安装插件：
+
+需要安装各种语言插件
+
+
+
+安装代码扫描器：
+
+下载安装
+https://docs.sonarqube.org/display/SCAN/Analyzing+with+SonarQube+Scanner
+
+sonar scanner
+
+解压后修改配置文件
+
+
+sonar.jdbc.username=sonar
+sonar.jdbc.password=123.com@PW
+sonar.jdbc.url=jdbc:mysql://localhost:3306/sonar?useUnicode=true&characterEncoding=utf8&rewriteBatchedStatements=true&useC
+onfigs=maxPerformance
+
+
+在需要扫描的代码中放如下 配置文件：
+
+sonar-project.properties
+
+内容如下：
+sonar.projectKey=php-simple-scanner
+sonar.projectName=php:projectName
+sonar.projectVersion=1.0
+sonar.sources=src
+sonar.sourceEncoding=UTF-8
+sonar.language=php
+
+
+
+
+mysql 5.7 yum安装：
+
+yum localinstall https://dev.mysql.com/get/mysql57-community-release-el7-9.noarch.rpm
+
+安装完成后启动服务时会生成一个临时密码在日志文件中，然后用如下命令去重置密码，
+mysql_secure_installation
+
+

@@ -1,0 +1,24 @@
+78、saltstack-无master和多master
+
+无master:
+关闭minion进程
+
+配置：修改minion配置文件：file_client: local
+配置file_roots:
+配置pillar_roots:
+
+
+使用salt-call命令：
+salt-call --local state.highstate
+
+
+多master:
+要保证多master中的key/file-roots/pillar-roots
+
+
+
+
+
+
+
+

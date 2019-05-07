@@ -1,0 +1,26 @@
+56、saltstack远程执行-执行模块
+
+差一个文档链接：
+
+/usr/lib/python2.7/site-packages/salt/mode
+
+cp模块：
+
+salt-cp '*' /etc/host /tmp/hehe
+
+将/master下的/etc/host 复制到所有minion /tmp/下并改为hehe
+
+state模块：
+http://docs.saltstack.cn/ref/modules/all/index.html
+
+salt '*' state.show_top
+
+salt '*' state.single pkg.installd name=lsof
+
+
+
+
+
+
+
+

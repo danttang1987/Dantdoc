@@ -1,0 +1,28 @@
+113、ELKStack-logstash-json
+
+方式一：
+将access log配置成json,然后通过codec进行处理。写入es
+log_format access_log_json escape=json '{"clientIP":"$remote_addr","clientuser":"$remote_user","log-time":"$time_local","Client-req":"$request","req-time":"$request_time","http-code":"$status","body_bytes_sent":"$body_bytes_sent","refere":"$http_referer","user-agent":"$http_user_agent"}'; 
+
+[root@nginx01 conf.d]# cat nginx.conf 
+input {
+        file {
+            path => "/app/nginx/logs/access-log.log"
+            codec => "json"
+        }
+
+}
+filter {
+
+}
+output {
+    elasticsearch {
+        hosts => ["192.168.237.207"]
+        index => "nginx-access-log-%{+YYYY.MM.dd}"
+    }
+}
+
+方式二：
+将正常的access log将写入redis，在通过phthon编码成json,写入ES
+
+

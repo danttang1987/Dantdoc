@@ -1,0 +1,9 @@
+100、jenkins-git插件使用
+
+1、在jenkins上创建一个sshkey密钥对，
+2、将公钥创建在gitlab上
+3、将私钥创建在jenkins上，在jenkins管理域——凭据——添加凭据
+
+
+
+可创建任务-源码管理

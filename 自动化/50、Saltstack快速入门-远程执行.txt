@@ -1,0 +1,41 @@
+50、Saltstack快速入门-远程执行
+
+1、minion 在启动时在/etc/salt/创建这个pki目录，在目录中的minion中生成了一个公钥和私钥
+
+2、在master中也会在/etc/salt/中创建一个pki日志中，用于管理minion的公钥。
+
+3、Master认证
+salt-key      #列出所有minion
+
+salt-key -a Keyname  #同意指定的minion
+
+salt-key -A  #同意所有minion
+
+
+同意后在master上将minion将的公钥存储在同意的目录中。
+同时也会将master的公钥传送到minion上。
+
+
+远程执行：
+1、检测minion是否正常。
+	salt '*' test.ping
+	
+	* 表示目标
+	test 模块
+	ping 方法
+
+2、执行命令
+	salt '*' cmd.run 'w'
+	
+	w:是命令
+	
+
+	
+
+
+
+
+
+
+
+

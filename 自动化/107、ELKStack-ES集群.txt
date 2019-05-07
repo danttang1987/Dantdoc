@@ -1,0 +1,33 @@
+107、ELKStack-ES集群
+
+
+cluster配置
+
+es配置：
+[root@es01 elasticsearch]# pwd
+/etc/elasticsearch
+[root@es01 elasticsearch]# cat elasticsearch.yml | grep ^[a-Z]
+cluster.name: my-escluster
+node.name: es02
+path.data: /data/es-data
+path.logs: /var/log/elasticsearch
+network.host: 192.168.237.208
+http.port: 9200
+discovery.seed_hosts: ["192.168.237.207","192.168.237.208"]
+cluster.initial_master_nodes: ["192.168.237.207","192.168.237.208"]
+
+mkdir /data/es-data -p
+chown elasticsearch.elasticsearch /data/es-data
+
+启动：
+/etc/init.d/elasticsearch start
+
+
+验证：
+	日志：
+	[2019-05-01T23:04:45,722][INFO ][o.e.c.r.a.AllocationService] [es01] Cluster health status changed from [YELLOW] to [GREEN] (reason: [shards started [[index-demo][0]] ...])
+	
+	API查看：
+	curl -i -XGET 'http://192.168.237.207:9200/_cluster/stats'
+	{"_nodes":{"total":2,"successful":2,"failed":0},"cluster_name":"my-escluster","cluster_uuid":"mmpKp6f8SLqBM7WtQxrUbw","timestamp":1556723165985,"status":"green",
+

@@ -1,0 +1,12 @@
+110、ELKStack-kibana
+
+
+修改配置文件
+
+/etc/kibana/kibana.yml
+
+[root@es01 kibana]# cat kibana.yml | grep ^[a-Z]
+server.port: 5601
+server.host: "192.168.237.207"
+elasticsearch.hosts: ["http://192.168.237.207:9200"]
+kibana.index: ".kibana"

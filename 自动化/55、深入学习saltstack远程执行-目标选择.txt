@@ -1,0 +1,104 @@
+55、深入学习saltstack远程执行
+
+	salt '*' cmd.run 'w'
+	
+命令：salt
+
+目标：'*'
+
+模块：cmd.run   自带150+模块，可以自己写模块
+
+返回：执行结果的返回，Returnners
+
+
+目标：
+所有匹配目标的方式都可以使用在topfile
+	
+	两种：一、和minion ID有关
+		  二、与minion ID无关
+		  
+	
+	一、和minion ID有关
+		1、直接写minion ID
+		2、通配符(*  [1-2]  )
+			[root@salt-master ~]# salt 'nginx[0-9][0-9]*' cmd.run 'w'   
+			nginx01.zishan.com:
+			 20:39:04 up 21 min,  1 user,  load average: 0.00, 0.01, 0.09
+			USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT
+			root     pts/0    192.168.237.1    20:27    8:40   0.06s  0.06s -bash
+		
+		3、列表：-L 'linux01,linux02'
+			[root@salt-master ~]# salt -L 'salt-master,nginx01.zishan.com' test.ping 
+			salt-master:
+				True
+			nginx01.zishan.com:
+				True
+		
+		4、正则表达式：-E 'linux(1|2)*'
+			[root@salt-master ~]# salt -E 'nginx0(1|2)\..*' cmd.run 'w' 
+			nginx01.zishan.com:
+			 20:43:04 up 25 min,  1 user,  load average: 0.00, 0.01, 0.07
+			USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT
+			root     pts/0    192.168.237.1    20:27   12:40   0.06s  0.06s -bash
+	主机名设计：redis-node1-redis04-idc04-soa.zishan.com
+	
+	
+	
+	二、与minion ID无关
+		1、ip或网络：-S 192.168.0.23     -S 192.168.0.0/24
+			[root@salt-master ~]# salt -S '192.168.237.0/24' test.ping
+			nginx01.zishan.com:
+				True
+			salt-master:
+				True
+		2、分组：在master配置文件中配置nodegroups  使用：-N nodegroupname
+			[root@salt-master ~]# salt -N 'group1' test.ping
+			salt-master:
+				True
+			nginx01.zishan.com:
+				True
+		
+		3、grains: -G 'apache: httpd'
+			[root@salt-master ~]# salt -G 'ip_interfaces:eth0:192.168.237.202' test.ping 
+			nginx01.zishan.com:
+				True
+		
+			[root@salt-master ~]# salt -G 'ipv4:192.168.237.202' test.ping  
+			nginx01.zishan.com:
+				True
+		   
+			ipv4:
+			- 127.0.0.1
+			- 192.168.237.202
+		
+		
+		4、pillar: -I 'apache: date'
+			[root@salt-master ~]# salt -I 'webservicename:httpd' test.ping      
+			nginx01.zishan.com:
+				True
+		
+		5、混合匹配： -C 
+		
+			Letter Match Type	   		例如：                    		Alt Delimiter?
+			G       Grains glob	   		G@os:Ubuntu	Yes
+			E		PCRE Minion ID		E@web\d+\.(dev|qa|prod)\.loc				No
+			P		Grains PCRE			P@os:(RedHat|Fedora|CentOS)					Yes
+			L		List of minions		L@minion1.example.com,minion3.domain.com or bl*.domain.com	No
+			I		Pillar glob			I@pdata:foobar					Yes
+			J		Pillar PCRE			J@pdata:^(foo|bar)$				Yes
+			S		Subnet/IP address	S@192.168.1.0/24 or S@192.168.1.100	No
+			R		Range cluster		R@%foo.bar							No
+		
+		salt -C 'webserv* and G@os:Debian or E@web-dc1-srv.*' test.ping
+		
+		#在Topfile中使用
+base:
+  'webserv* and G@os:Debian or E@web-dc1-srv.*':
+    - match: compound
+    - webserver
+		
+		6、百分比：-b 10
+		
+差一个文档的链接：	http://docs.saltstack.cn/topics/targeting/compound.html
+		
+

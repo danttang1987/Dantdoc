@@ -1,0 +1,19 @@
+121、ELKStack-生产分析
+
+需求分析：
+	访问日志：apache访问日志、nginx访问日志、tomcat
+	错误日志：error log 、java日志
+	系统日志：/var/log/*   rsyslog
+	运行日志：程序写的
+	网络日志：防火墙、交换机、路由器
+
+
+标准化：
+	日志存放位置（/data/log/{access_log,error_log,runtime_log}）
+	格式   json
+	命名规则
+    日志切割
+	所有原始文本备份后，删除三天前的
+
+工具化：
+	如何使用logstash进行收集

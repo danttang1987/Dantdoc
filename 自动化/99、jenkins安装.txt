@@ -1,0 +1,20 @@
+﻿jenkins安装
+
+yum install -y java-1.8.0
+[root@linux-node1 ~]# cd /etc/yum.repos.d/
+[root@linux-node1 yum.repos.d]# wget http://pkg.jenkins.io/redhat/jenkins.repo
+[root@linux-node1 ~]# rpm --import http://pkg.jenkins.io/redhat/jenkins.io.key
+
+
+
+yum install -y jenkins
+
+
+cat /var/lib/jenkins/secrets/initialAdminPassword
+
+jenkins插件安装目录：
+
+/var/lib/jenkins/plugins
+
+
+

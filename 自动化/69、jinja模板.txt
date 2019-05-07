@@ -1,0 +1,85 @@
+69、jinja模板
+
+是一个python的模板语言
+
+YAML-jinja模板
+
+{% 表达式 %}
+{{ 变量 }}
+
+
+在配置文件中修改端口：
+1、告诉file模块要使用jinja模板：
+	file.managed:
+	  - template: jinga
+2、要列出参数列表：
+	file.managed:
+	  - template: jinga	
+	  - defaults:
+	    PORT: 88
+
+3、在模板文件中引用
+Listen {{ PORT }}
+
+模板支持  salt grains pillar
+
+
+方法一：在模板文件中使用
+
+模板文件支持grains示例：
+Listen {{ grains['fqdn_ip4'][0] }}:{{ PORT }}
+
+模板文件使用远程执行示例：
+{{ salt ['network.hw_addr']('eth0') }}
+
+模板文件使用pillar示例：
+{{ pillar['apache'] }}
+
+方法一：在sls文件中使用
+Listen: {{ grains['fqdn_ip4'][0] }}
+Test: {{ salt ['network.hw_addr']('eth0') }}
+Test2: {{ pillar['apache'] }}
+
+然后在模板中引用
+
+
+    - template: jinja
+    - defaults:
+      PORT: 80
+      IPADD: {{ grains['fqdn_ip4'][0] }}
+      MAC: {{ salt['network.hw_addr']('eth0') }}
+
+
+#################
+在sls文件中使用jinja设置变量
+{% set FILENAME = 'haproxy-1.8.19.tar.gz' %}
+{% set FILEDIR='haproxy-1.8.19' %}
+include:
+  - procinit.init
+  
+haproxy-install:
+file.managed:
+  - name: /app/source/{{ FILENAME }}
+  - source: salt://modules/haproxy/files/{{ FILENAME }}
+  - user: root
+  
+  
+################################
+在sls文件中使用jinja条件
+keepalived-server:
+  file.managed:
+    - name: /etc/keepalived/keepalived.conf
+    - source: salt://lbincluster/files/haproxy-inside-keepalived.conf
+    - mode: 644
+    - user: root
+    - group: root
+    - template: jinja
+    {% if grains['fqdn'] == 'salt-master' %}
+    - ROUTEID: haproxy_ha
+    - STATEID: MASTER
+    - PRIORITYID: 150
+    {% elif grains['fqdn'] == 'nginx01.zishan.com' %}
+    - ROUTEID: haproxy_ha
+    - STATEID: BACKUP
+    - PRIORITYID: 100
+    {% endif %}  

@@ -181,5 +181,5 @@ END                             》
 ;session.save_handler = files
 ;session.save_path = "/tmp"
 #改为
-session.save_handler = memcache
+session.save_handler = memcached
 session.save_path = "tcp://192.168.237.18:11211"

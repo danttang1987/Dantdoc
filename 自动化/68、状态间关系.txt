@@ -1,0 +1,78 @@
+68、状态间关系
+
+1、我依赖谁
+	require:
+	  - pkg: lamp-pkg    #状态模块: ID名
+	  - file: apache-config
+	
+2、我被谁依赖
+	require-in
+
+
+3、我监控谁
+	watch:
+	  - file: apache-config
+	  
+4、我被谁监控
+
+
+5、我引用谁
+include:
+  - lamp.pkg
+
+6、
+
+
+
+
+lamp-pkg:
+  pkg.installed:
+    - pkgs:
+	  - httpd
+	  - php
+	  - mariadb
+	  - mariadb-server
+	  - php-mysql
+	  - php-cli
+	  - php-mbstring
+
+apache-config:
+  file.managed:
+    - name: /etc/httpd/conf/httpd.conf
+	- source: salt://lamp/files/httpd.conf
+	- user: root
+	- group: root
+	- mode: 644
+	
+php-config:
+  file.managed:
+    - name: /etc/php.ini
+	- source: salt://lamp/files/php.ini
+	- user: root
+	- group: root
+	- mode: 644
+	
+mysq-config:
+  file.managed:
+    - name: /etc/my.cnf
+	- source: salt://lamp/files/my.cnf
+	- user: root
+	- group: root
+	- mode: 644	
+
+apache-service:
+  service.running:
+    - name: httpd
+    - enable: True
+	- reload: True     #如果没有配置reload，那么watch监控到配置文件变化后将重启服务，如果配置将重载。
+	- require:
+	  - pkg: lamp-pkg
+	  - file: apache-config
+	- watch:
+	  - file: apache-config
+
+mysql-service:
+  service.running:
+    - name: mariadb
+    - enable: True
+    - reload: True

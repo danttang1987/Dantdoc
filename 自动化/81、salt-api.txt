@@ -1,0 +1,89 @@
+81、salt-api
+
+http://docs.saltstack.cn/ref/netapi/all/index.html
+http://docs.saltstack.cn/ref/netapi/all/salt.netapi.rest_cherrypy.html
+
+yum install -y salt-api
+
+useradd -M -s /sbin/nologin salt-api
+
+passwd salt-api
+
+cd /etc/pki/tls/certs/
+
+
+make testcert
+
+cd /etc/pki/tls/private
+
+openssl rsa -in localhost.key -out salt-nopass.key
+
+pip install CherryPy==3.2.6
+
+
+
+vim /etc/salt/master
+
+default_include: /etc/salt/master.d/
+
+cd /etc/salt/master.d/api.conf
+
+rest_cherrypy:
+  host:
+  port:
+  ssl_cert: /etc/pki/tls/certs/localhost.crt
+  ssl_key: /etc/pki/tls/private/salt-nopass.key
+  
+vim eauth.conf
+
+external_auth:
+  pam:
+    salt-api:
+	  - .*
+	  - '@wheel'
+	  - '@runner'
+启动saltapi
+systemctl start salt-api
+
+
+应用：
+1、认证，成功后可以返回一个token
+curl -sSk https://localhost:8000/login \
+    -H 'Accept: application/x-yaml' \
+    -d username=saltdev \
+    -d password=saltdev \
+    -d eauth=pam
+	
+2、	查询
+curl -sSk https://localhost:8000/minions/linux-node01.zishan.com\
+-H 'Accept: application/x-yaml' \
+-H 'X-Auth-Token: 返回的Token' \
+
+3、查询minion的状态
+curl -sSk https://localhost:8000/\
+-H 'Accept: application/x-yaml' \
+-H 'X-Auth-Token: 返回的Token' \
+-d client='runner'
+-d fun='manage.status'
+
+4、执行模块
+curl -sSk https://localhost:8000/\
+-H 'Accept: application/x-yaml' \
+-H 'X-Auth-Token: 返回的Token' \
+-d client='local'
+-d tgt='*'
+-d fun='test.ping'
+
+5、
+curl -sSk https://localhost:8000/\
+-H 'Accept: application/x-yaml' \
+-H 'X-Auth-Token: 返回的Token' \
+-d client='local'
+-d tgt='*'
+-d fun='test.ping'
+
+6、查看job
+curl -sSk https://localhost:8000/jobs\
+-H 'Accept: application/x-yaml' \
+-H 'X-Auth-Token: 返回的Token' \
+

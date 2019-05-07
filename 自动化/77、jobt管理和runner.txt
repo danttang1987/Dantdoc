@@ -1,0 +1,37 @@
+77、jobt管理和runner
+
+job执行完成的任务默认会保存在master的cache中，可以通过配置文件查看缓存的目录
+
+默认路径为:/var/cache/salt/
+
+
+将job通过cache保存在mysql中：
+yum install MySQL-python
+
+master_job_cache: mysql
+mysql.host: '192.168.237.203'
+mysql.port: 3306
+mysql.user: 'salt'
+mysql.pass: '123.com'
+mysql.db: 'saltdb'
+
+
+
+saltutil.
+
+查看cache中的jobs:
+salt-run jobs.list_jobs
+
+查看某个job的返回内容：
+salt-run jobs.lookup_jid 
+
+
+salt-run manage.status
+salt-run manage.down
+salt-run manage.up
+salt-run manage.versions
+
+
+
+
+

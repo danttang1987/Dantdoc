@@ -1,0 +1,16 @@
+71、saltstack项目实战-系统初始化
+
+
+1、系统初始化模块
+
+2、功能模块：设置单独的目录（haproxy/nginx/php/mysql/memcached）
+
+3、业务模块：根据业务类型划分，如web服务/论坛bbs
+
+
+开始配置：
+    1、salt环境配置（base\开发、测试、预生产、生产）
+	
+	2、环境初始化：
+	    记录命令操作/DNS配置/history记录/内核优化/安装zibbix agent/配置ntp/
+	

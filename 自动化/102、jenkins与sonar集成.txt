@@ -1,0 +1,26 @@
+102、jenkins与sonar scanner集成
+
+1、在jenkins中安装sonar scanner插件
+2、在jenkins中的系统管理——系统设置——SonarQube servers 添加sonarqube服务器
+3、将sonar scanner插件下载到jenkins服务器上，并配置scanner配置文件。
+4、在jenkins中的系统管理——全局工具配置——sonarqube scanner——添加scanner,并配置scanner的路径（/usr/local/sonar-scanner）禁用自动安装。
+5、配置job——在构建中选择“exectue sonarqube scanner”——并设置Analysis properties如下：
+sonar.projectKey=php-daemon
+sonar.projectName=php:daemon
+sonar.projectVersion=1.0
+sonar.sources=./
+sonar.sourceEncoding=UTF-8
+sonar.language=php
+
+
+
+
+
+
+
+
+
+
+与gitlab hook
+
+http://192.168.237.205:8080/buildByToken/build?job=web-sonar&token=a909fc909b6420752e87

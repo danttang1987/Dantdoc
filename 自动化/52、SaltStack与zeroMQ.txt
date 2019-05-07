@@ -1,0 +1,15 @@
+52、SaltStack与zeroMQ
+
+salt端口：
+
+4505：消息发布端口
+
+4506：
+
+安装如下包可以查看进行名称。
+python-setproctatile
+
+
+
+
+

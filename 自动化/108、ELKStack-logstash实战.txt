@@ -1,0 +1,61 @@
+108、ELKStack-logstash实战
+
+ ./logstash -e 'input { stdin{} } output { stdout{ codec => rubydebug } }'
+ 
+ 
+  ./logstash -e 'input { stdin{} } output { elasticsearch { hosts => '192.168.237.207' index =>'logstash-%{+YYYY.MM.dd}' } }'
+ 
+ codec => rubydebug
+ 
+ 
+logstash配置文件：
+
+cd /etc/logstash/conf.d/
+
+
+input {
+    stdin {}
+}   
+filter {
+
+}
+
+output {
+    elasticsearch {
+        hosts => ["192.168.237.208"]
+        index => "logstash-%{+YYYY.MM.dd}"
+    }
+    stdout {
+
+    }
+}
+
+
+事件   -》 input  -->  codec   -->    filter  -->    codec  --->    output
+
+
+收费messageslog
+
+input {
+    file {
+        path => ["/var/log/messages","/var/log/secure"]
+        start_position => "beginning"
+    }
+}
+filter {
+
+}
+
+output {
+    elasticsearch {
+        hosts => ["192.168.237.208"]
+        index => "system-log-%{+YYYY.MM}"
+    }
+    stdout {
+        
+    }
+}
+
+
+
+

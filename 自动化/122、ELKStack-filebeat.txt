@@ -1,0 +1,36 @@
+122、ELKStack-filebeat
+
+
+filebeat ----->  redis ---->  logstash ------->  es
+
+yum install filebeat -y
+
+配置文件：
+/etc/filebeat/filebeat.yml
+
+测试：将日志推送到logstash
+cat /etc/filebeat/filebeat.yml
+
+filebeat.inputs:
+  - type: log
+    paths:
+      - /var/log/httpd/access_log
+output.logstash:
+  hosts: ["192.168.237.207:5044"]
+  
+
+/etc/init.d/filebeat status
+
+
+在logstash中配置：
+input {
+    beats {
+        port => 5044
+    }
+}
+output {
+    elasticsearch {
+        hosts => ["192.168.237.208"]
+        index => "filebeat-%{+YYYY.MM.dd}"
+    }
+}

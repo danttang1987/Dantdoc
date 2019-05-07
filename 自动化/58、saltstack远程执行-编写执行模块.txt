@@ -1,0 +1,18 @@
+58、saltstack远程执行-编写执行模块
+
+1、放哪里base环境中的_modules：
+	mkdir /srv/salt/_modules
+2、文件名就是模块名：
+	如：my_disk.py
+vim my_disk.py	
+	def list():
+	    cmd =  'df -h'
+        ret = __salt__['cmd.run'](cmd)
+		return ret
+
+
+3、刷新：
+salt '*' saltutil.sync_modules
+
+4、使用
+salt '*' my_disk.list
