@@ -1,0 +1,156 @@
+3、容器操作
+
+# 创建容器
+
+## 创建一个容器
+
+[root@docker01 ~]# docker create -it ubuntu:14.04
+a65edd20d8fcf85372ea935bbcc3773b1309f78cbb39be6829523d1d45f46c12
+[root@docker01 ~]# docker ps -a
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS                      PORTS               NAMES
+a65edd20d8fc        ubuntu:14.04        "/bin/bash"         39 seconds ago      Created                                         unruffled_knuth
+
+刚创建的容器是处于停止状态，可以使用docker start 命令启动
+docker create 和docker run 命令支持的选项很多，
+
+## 启动一个容器
+
+docker start a65
+
+[root@docker01 ~]# docker ps -a    
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS                      PORTS               NAMES
+a65edd20d8fc        ubuntu:14.04        "/bin/bash"         14 minutes ago      Up 4 seconds                     
+
+## 创建并启动一个容器
+docker run -it ubuntu:14.04
+等于 create 加 start
+
+当使用docker run创建时要执行如下：
+检查本地是否有指定的镜像，如没有就从公有仓库下载
+利用镜像创建一个容器，并启动容器
+分配一个文件系统给容器，并在只读的镜像层外面挂载一层可读写层
+从宿主机配置的网络接口桥接一个虚拟接口到容器中
+从网桥的地址池配置一个IP地址给容器
+执行用户指定的命令
+执行完毕后容器自动终止
+
+注：当容器的命令执行完成后会自动退出，在某些情况由于执行的命令无法执行，容器真的退出，此时可以查看错误代码。
+默认情况下常见的错误代码：
+125：Docker daemon执行错误
+126：所指的命令无法执行，例如权限出错 
+127：容器内部的命令无法找到
+
+## 创建并启动一个守护进程的容器
+
+docker run -d ubuntu:14.04 /bin/sh -c "while true;do echo 123;sleep 10;done"
+
+可通过docker ps查看
+[root@docker01 docker]# docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
+01eeaff4eb34        ubuntu:14.04        "/bin/sh -c 'while..."   3 minutes ago       Up 3 minutes                            amazing_thompson
+
+可通过docker logs conID查看输出
+[root@docker01 docker]# docker logs 01ee
+ttt
+ttt
+ttt
+ttt
+ttt
+
+# 终止容器
+
+docker stop [-t|--time=10] CONTAINERID
+
+stop命令首先向容器发送SIGTERM信号，等待一段时间的超时，默认为10s ，再发送SIGKILL信号来终止容器。
+
+[root@docker01 docker]# docker stop 01ee
+01ee
+[root@docker01 docker]# docker ps
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+
+终止的容器可使用docker start 命令启动
+
+docker start CONTAINERID
+
+同时还可对容器进行重启
+docker restart CONTAINERID
+
+
+
+# 进入容器
+在使用-d参数创建容器时，容器在后台运行，无法看到容器中的内容，可以使用如下三种方法：
+## attach命令
+
+docker attach [--detach-key  --no-stdin --sig-proxy] CONTAINERID
+
+--detach-key：指定退出attach模式的快捷键，默认为CTRL+q
+--no-stdin:是否关闭标准输入，默认打开
+--sig-proxy:是否代理收到系统信号给应用进程
+
+[root@docker01 docker]# docker ps
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+21ae696d1742        ubuntu:14.04        "/bin/bash"         12 seconds ago      Up 11 seconds                           hopeful_hermann
+[root@docker01 docker]# docker attach 21ae
+root@21ae696d1742:/# 
+root@21ae696d1742:/# 
+
+## exec命令
+docker exec [-d|--detach --detach-key=[] -i --privileged -t -u|--user=[USER]] CONTAINERID CMD [ARG ...]
+
+exec命令提供直接在容器中执行命令功能
+-i :打开标准输入，接受用户的输入命令，默认为false
+--privileged :是否给执行命令以最高的权限，默认为false
+-t：分配伪终端，默认为false
+-u:执行命令的用户或ID
+ docker exec -it 21ae /bin/bash
+ 
+## nsenter命令
+
+nsenter命令可以连接到容器，需要知道容器进程的ID
+
+查看容器进程的PID
+CONPID=$(docker inspect --format {{.State.Pid}} 21ae)
+
+nsenter --target $CONPID --mount --uts --ipc --net --pid
+
+# 删除容器
+
+docker rm [-f -l -v ] CONTAINERID
+
+-f:是否强行终止并删除一个正在运行的容器
+-l:删除容器的连接，但保留容器
+-v:删除容器挂载的数据卷
+
+# 导入和导出容器
+## 导出容器
+
+docker export -o test_for_run.tar CONTAINERID
+
+[root@docker01 ~]# docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
+0bfc23e734fe        ubuntu:14.04        "/bin/sh -c 'while..."   4 seconds ago       Up 3 seconds                            zen_meitner
+[root@docker01 ~]# docker export -o test_run-container.tar 0bfc23
+[root@docker01 ~]# ls
+anaconda-ks.cfg  ks-pre.log  original-ks.cfg  test_run-container.tar  ubuntu14.04.tar
+
+## 导入容器
+docker import [-c -m ] file|url|- [REPOSITORY:TAG]
+
+将容器导入，成为一个镜像
+
+docker import test_run-container.tar test/ubuntu:v2.0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

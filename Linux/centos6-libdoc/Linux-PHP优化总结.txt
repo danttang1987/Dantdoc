@@ -1,0 +1,88 @@
+PHP优化总结：
+
+1、php-fpm.conf配置优化（默认在php安装目录下的etc中）
+
+listen = 127.0.0.1:9000
+listen.backlog = 4096
+pm = static
+pm.max_children = 200
+pm.start_servers = 20
+pm.min_spare_servers = 10
+pm.max_spare_servers = 30
+pm.max_requests = 10240
+slowlog = log/$pool.log.slow
+request_slowlog_timeout = 2
+request_terminate_timeout = 0
+
+rlimit_files = 1024
+rlimit_core = 0
+
+说明：
+listen = 127.0.0.1:9000   #设置fpm监听，可以用socket，与可以使用IP端口，在高并发环境中使用IP:端口要稳定些
+listen.backlog = 4096     #设置backlog  1024-16384  与系统内核net.ipv4.tcp_max_syn_backlog = 16384有关，与Nginxs配置有关配置 listen IP：Port backlog 4096 (默认为511)
+pm = dynamic|static       #fpm work进行是以动态还是静态，配置为静态性能更好，但更占资源，1个work进程20M。一般配置100个到200个，根据内存情况
+pm.max_children = 200     #最大的work进程数
+pm.start_servers = 20     #开始多个work进程数，pm = dynamic时生效
+pm.min_spare_servers = 10 #最小空闲进程数，pm = dynamic时生效
+pm.max_spare_servers = 30 #最大空闲进程数，pm = dynamic时生效
+pm.max_requests = 10240   #单个进程最大处理任务数，完成后进程会自动结束，重启新的进程。
+slowlog = log/$pool.log.slow   #记录请求超过request_slowlog_timeout的堆栈
+request_slowlog_timeout = 2    #
+rlimit_files = 1024            #文件打开描述符的rlimit限制，默认使用系统设置，ulimit -n查看，通过echo ‘ulimit -HSn 65536′ >> /etc/rc.local修改
+rlimit_core = 0                #
+
+慢日志分析：
+grep -v "^$" www.log.slow.tmp | cut -d " " -f 3,2 | sort | uniq -c | sort -k1,1nr | head -n 50
+
+跟踪进程
+nohup strace -T -p 13167 > 13167-strace.log &
+
+
+2、php.ini 优化 （默认在php安装目录下的lib中）
+
+safe_mode = on       #打开php的安全模式：php安全模式是个非常重要的php内嵌的安全机制，能够控制一些php的函数执行，比如system()调用系统命令函数
+safe_mode_gid = off  #防止php程序对脚本执行有权限
+disable_functions = system,passthru,exec,shell_exec,popen,phpinfo        #关闭危险函数：如果打开了安全模式，那么函数禁止是可以不需要的，但是我们为了安全还是可以关闭的，特别是phpinfo（）
+disable_functions = chdir,chroot,dir,getcwd,opendir,readdir,scandie,fopen,unlink,delete,copy,mkdir,rmdir,rename,file,file_getcontents,fputs,fwrite,chgrp,chmod,chown      #如果要禁止任何文件和目录的操作，那么可以关闭很多文件操作
+expose_php = off          #关闭PHP版本信息在http头中的泄漏
+register_globals = off    #关闭注册全局变量：在PHP中提交的变量，包括使用POST或者GET提交的变量，都将自动注册为全局变量，能够直接访问，这是对服务非常不安全的推荐使用预定义的超全局变量：$_ENV,$_GET,$_POST,$_COOKIE,$_SERVER
+#该指令收variables_order指令的影响，5.5自动关闭了
+magic_quotes_gpc = on      #打开magic_quotes_gpc来防止SQL注入:SQL注入是非常危险的问题，轻则网站后台被入侵，重则整个服务器沦陷
+                           #Apache 中的mod_security和mod_evasive   Nginx lua waf
+display_errors = off #错误信息控制:正式环境不要给用户报错
+log_errors = on #打开日志开关
+error_log = /application/logs/php_error.log     #设置路径
+max_execution_time = 30       #设置每个脚本运行的最长时间:但无法上传较大的文件或者后台备份数据经常超时时，此时需要调整如下设置   
+                              #每个脚本允许的最大执行时间，0表示没有限制
+                              #这个参数有助于阻止恶劣脚本无休止的占用服务器资源
+memory_limit = 128m            #每个脚本使用的最大内存
+max_input_time = 60;   #每个脚本等待输入数据最长时间(-1表示不限制)
+upload_mx_filesize = 2M;      #上传文件的最大许可
+
+
+
+
+部分安全参数优化
+
+allow_url_fopen = off       #禁止打开远程地址:记得最近出的php include的那个安全漏洞吧！就是在一个php程序中的include了变量，那么入侵者就可以利用这个控制服务器在本地执行远程的一个php程序，例如phpshell
+cgi.fix_path = 0         #设定防止Nginx文件解析错误漏洞
+							
+session.save_handler = memcache     3）调整php sesson会话共享信息存放位置
+session.save_path = "tcp://10.0.0.8:1211"
+
+
+
+
+1）php引擎缓存加速优化
+
+#xcache、ZendOpcache、eaccelerator
+#http://www.lichengbing.cn/archivers/270.html
+2) 使用tmpfs作为缓存加速缓存的文件目录
+
+tmpfs，基于内存的文件系统，加快转存暂存文件的速度
+
+[root@web01 ~]# mount -t tmpfs tmpfs /dev/shm -o size=256m
+[root@web01 ~]# mount -t tmpfs tmpfs /dev/shm /tmp/eaccelerator #上传图片缩略图临时处理目录和缓存目录
+3) 防止PHP程序上传文件到图片附件目录
+
+#Nginx防御 http://www.lichengbing.cn/archivers/279.html

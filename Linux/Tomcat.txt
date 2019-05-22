@@ -1,0 +1,40 @@
+
+#1、安装jdk
+
+配置JDK环境
+export JAVA_HOME=/usr/local/jdk1.8.0_151 
+export CLASSPATH=$CLASSPATH:$JAVA_HOME/lib:$JAVA_HOME/jre/lib 
+export PATH=$JAVA_HOME/bin:$JAVA_HOME/jre/bin:$PATH:$HOMR/bin 
+
+
+#2、下载tomcat，解压后就可以使用
+做好软链接
+
+
+#3、配置虚拟主机
+在server.xml配置文件末尾加入如下行：(附截图)
+
+<Context path="/" docBase="/data/webapps/www" reloadable="true"/> 
+
+
+#4、优化配置
+
+maxThreads：tomcat起动的最大线程数，即同时处理的任务个数，默认值为200
+
+acceptCount：当tomcat起动的线程数达到最大时，接受排队的请求个数，默认值为100
+
+Server.xml里面优化如下：
+<Connector port="8080" 
+protocol="org.apache.coyote.http11.Http11NioProtocol" 
+connectionTimeout="20000" 
+redirectPort="8443" 
+maxThreads="5000" 
+minSpareThreads="20" 
+acceptCount="1000" 
+disableUploadTimeout="true" 
+enableLookups="false" 
+URIEncoding="UTF-8" /> 
+
+优化jvm虚拟机
+Catalina.sh JVM参数优化，添加如下内容：
+CATALINA_OPTS="$CATALINA_OPTS –Xms4000M –Xmx4000M –Xmn1000M -XX:SurvivorRatio=4 -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=82 -DLOCALE=UTF-16LE -DRAMDISK=/ -DUSE_RAM_DISK=ture -DRAM_DISK=true"

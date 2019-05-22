@@ -1,0 +1,45 @@
+1、docker安装
+
+
+#安装
+
+[root@docker01 yum.repos.d]# cat cobbler-config.repo 
+[core-0]
+name=core-0
+baseurl=https://yum.dockerproject.org/repo/main/centos/7/
+enabled=1
+gpgcheck=1
+gpgkey=https://yum.dockerproject.org/gpg
+priority=1
+
+yum install docker-engine
+
+#docker命令
+[root@docker01 yum.repos.d]# docker
+docker                  docker-containerd-ctr   dockerd                 docker-proxy            
+docker-containerd       docker-containerd-shim  docker-init             docker-runc             
+
+
+#docker版本
+[root@docker01 yum.repos.d]# docker version
+Client:
+ Version:      17.05.0-ce
+ API version:  1.29
+ Go version:   go1.7.5
+ Git commit:   89658be
+ Built:        Thu May  4 22:06:25 2017
+ OS/Arch:      linux/amd64
+Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?
+
+#如使用普通用户登录系统需要将用户加入docker组中
+usermod -aG docker username
+
+#启动docker
+systemctl start docker
+
+
+
+
+
+
+

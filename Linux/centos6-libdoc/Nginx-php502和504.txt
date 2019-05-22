@@ -1,0 +1,51 @@
+Nginx-php502和504
+
+在使用Nginx时，经常会碰到502 Bad Gateway和504 Gateway Time-out错误，下面以Nginx+PHP-FPM来分析下这两种常见错误的原因和解决方案。
+
+1.502 Bad Gateway错误 
+
+在php.ini和php-fpm.conf中分别有这样两个配置项：max_execution_time和request_terminate_timeout。
+这两项都是用来配置一个PHP脚本的最大执行时间的。当超过这个时间时，PHP-FPM不只会终止脚本的执行，
+还会终止执行脚本的Worker进程。所以Nginx会发现与自己通信的连接断掉了，就会返回给客户端502错误。
+
+以PHP-FPM的request_terminate_timeout=30秒时为例，报502 Bad Gateway错误的具体信息如下：
+1）Nginx错误访问日志：
+     2013/09/19 01:09:00 [error] 27600#0: *78887 recv() failed (104: Connection reset by peer) while reading response header from upstream, 
+     client: 192.168.1.101, server: test.com, request: "POST /index.php HTTP/1.1", upstream: "fastcgi://unix:/dev/shm/php-fcgi.sock:", 
+     host: "test.com", referrer: "http://test.com/index.php"
+
+2）PHP-FPM报错日志：
+     WARNING:  child 25708 exited on signal 15 (SIGTERM) after 21008.883410 seconds from start
+
+所以只需将这两项的值调大一些就可以让PHP脚本不会因为执行时间长而被终止了。request_terminate_timeout可以覆盖max_execution_time，
+所以如果不想改全局的php.ini，那只改PHP-FPM的配置就可以了。
+
+此外要注意的是Nginx的upstream模块中的max_fail和fail_timeout两项。有时Nginx与上游服务器（如Tomcat、FastCGI）的通信只是偶然断掉了，
+但max_fail如果设置的比较小的话，那么在接下来的fail_timeout时间内，Nginx都会认为上游服务器挂掉了，都会返回502错误。
+所以可以将max_fail调大一些，将fail_timeout调小一些。
+
+2.504 Gateway Time-out错误
+
+PHP-FPM设置的脚本最大执行时间已经够长了，但执行耗时PHP脚本时，发现Nginx报错从502变为504了。这是为什么呢？
+因为我们修改的只是PHP的配置，Nginx中也有关于与上游服务器通信超时时间的配置factcgi_connect/read/send_timeout。
+
+以Nginx超时时间为90秒，PHP-FPM超时时间为300秒为例，报504 Gateway Timeout错误时的Nginx错误访问日志如下：
+     2013/09/19 00:55:51 [error] 27600#0: *78877 upstream timed out (110: Connection timed out) while reading response header from upstream, 
+     client: 192.168.1.101, server: test.com, request: "POST /index.php HTTP/1.1", upstream: "fastcgi://unix:/dev/shm/php-fcgi.sock:", 
+     host: "test.com", referrer: "http://test.com/index.php"
+
+调高这三项的值（主要是read和send两项，默认不配置的话Nginx会将超时时间设为60秒）之后，504错误也解决了。
+而且这三项配置可以配置在http、server级别，也可以配置在location级别。担心影响其他应用的话，就配置在自己应用的location中吧。
+要注意的是factcgi_connect/read/send_timeout是对FastCGI生效的，而proxy_connect/read/send_timeout是对proxy_pass生效的。
+
+配置举例：
+location ~ \.php$ {
+                root                    /home/cdai/test.com;
+                include                 fastcgi_params;
+                fastcgi_connect_timeout      180;
+                fastcgi_read_timeout            600;
+                fastcgi_send_timeout            600;
+                fastcgi_pass            unix:/dev/shm/php-fcgi.sock;
+                fastcgi_index           index.php;
+                fastcgi_param          SCRIPT_FILENAME /home/cdai/test.com$fastcgi_script_name;
+     }

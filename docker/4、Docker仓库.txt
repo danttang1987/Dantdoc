@@ -1,0 +1,65 @@
+4、Docker仓库
+
+repository    仓库
+registry    注册服务器
+
+一个注册服务器可能包括多个仓库，一个仓库中有多个镜像
+
+# Docker Hub公共镜像仓库
+
+## 登录
+docker login
+需要使用用户名密码/邮箱进行验证，验证完成后会保存在用户目录中的.dockercfg中。
+
+## 基本操作
+
+docker search    搜索镜像
+docker pull      下载镜像
+
+
+# 其他仓库
+如时速云：
+
+docker pull index.tenxcloud.com/docker_library/node:latest
+
+# 搭建本地私有仓库
+
+## 使用registry镜像创建私有仓库
+
+docker run -d -p 5000 5000 registry
+
+默认镜像存储在容器的/tmp/registry目录下，可将镜像存储在本地服务器
+*****docker run -d -p 5000:5000 -v /data/registry:/tmp/registry registry
+
+
+## 将镜像上传到私有仓库
+
+新版本的docker不能使用http协议，私有仓库默认为http，需要配置docker服务的启动参数。
+修改文件：
+vim /usr/lib/systemd/system/docker.service
+增加--insecure-registry 192.168.237.220:5000
+ExecStart=/usr/bin/dockerd --insecure-registry 192.168.237.220:5000
+重启docker服务
+
+将镜像重新打标记
+docker tag ubuntu:14.04 192.168.237.220:5000/test
+
+上传到私有仓库
+docker push 192.168.237.220:5000/test
+
+从私有仓库下载
+docker pull 192.168.237.220:5000/test
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,45 @@
+5、docker数据管理
+
+容器中的数据管理主要有两种：
+1. 数据卷（Data Volume）：容器内的数据直接映射到本地主机的环境中
+2. 数据卷容器（Data Volume Containers）：使用特定的容器维护数据卷
+
+# 数据卷
+
+是一个可供容器使用的特殊目录
+
+## 在容器内创建一个数据卷
+
+docker run -d -P --name web -v /webapp training/webapp python app.py
+
+## 挂载一个主机目录作为数据卷
+
+docker run -d -P --name web -v /src/webapp:/opt/webapp /training/webapp python app.py
+
+将本地的/src/webapp目录挂载到容器中的/opt/webapp
+
+还可以添加权限rw|ro
+docker run -d -P --name web -v /src/webapp:/opt/webapp:ro /training/webapp python app.py
+
+
+## 挂载一个主机文件到容器的文件作为数据卷(不推荐使用)
+
+docker run -d -P --name web -v /src/webapp/index.html:/opt/webapp/index.html /training/webapp python app.py
+
+
+
+# 数据卷容器
+
+创建一个专用于存储数据的容器
+docker run -it -v /dbdata --name c-dbdata ubuntu:14.04
+
+创建容器连接数据卷容器
+docker run -it --volumes-from c-dbdata --name db01 ubuntu:14.04 
+docker run -it --volumes-from c-dbdata --name db02 ubuntu:14.04 
+
+在删除容器时数据卷不会自动删除，如要删除数据卷，需要使用-v参数
+docker rm -v 
+
+
+
+

@@ -1,0 +1,140 @@
+7、docker-使用dockerfile创建镜像
+
+# 基本结构
+
+dockerfile由一行行命令语句组成，可用户#开头注释
+
+一般dockerfile分为四个部分：基础镜像信息/维护者信息/镜像操作指令和容器启动时执行的指令
+
+例如：
+FROM ubuntu
+
+MAINTAINER docker_user docker_user@email.com
+
+RUN mkdir /abc
+RUN apt-get update && apt-get install -y nginx
+RUN echo "\ndaemon off;" /etc/nginx/nginx.conf
+
+CMD /usr/sbin/nginx
+
+#######################################
+开始必须指定所基于的镜像名称
+下面是维护者信息
+后面是镜像操作指令：如RUN命令，每一条RUN命令镜像就添加新的一层，并提交；
+最后是CMD指令，用来指定运行容器时的操作命令
+
+# 指令说明
+## 1、FROM
+指定基础镜像
+FROM <image>:<tag>
+
+## 2、MAINTAINER
+指定维护者信息
+MAINTAINER <name>
+
+## 3、RUN
+运行指定的命令
+RUN <command> 或 RUN ["executable","param1","param2"]
+前者是在shell终端中执行命令； 后者则是使用exec执行，不会启动shell环境。
+每一条RUN命令都会创建一个层。
+
+## 4、CMD
+CMD指令用来指定启动容器时默认执行的命令，有如下三种方式：
+CMD ["executable","param1","param2"]   使用exec执行,是推荐使用的方式
+CMD command param1 param2    在/bin/sh中执行，提供给需要交互的应用； 
+CMD ["param1","param2"]      提供给ENTRYPOINT的默认参数
+
+注：每个Dockerfile文件只能有一条CMD命令，如果指定多条命令，只有最后一条会被执行，
+    如用户在启动容器时手动指定运行命令，则会覆盖CMD命令
+
+## 5、LABEL
+指定生成去问轻柔元数据标签信息。
+LABEL <key>=<value> <key>=<value> <key>=<value> ....
+LABEL version="1.0"
+
+## 6、EXPOSE
+声明镜像内服务所监听的端口
+EXPOSE <PORT> <PORT> ...
+注：该命令只做声明，不会映射端口
+
+## 7、ENV
+指定环境变量，在镜像生成过程中会被后续的RUN指令使用，在镜像启动的容器中也会存在。
+ENV <key> <value>或ENV <key>=<value>
+
+
+## 8、ADD
+该命令将复制指定的SRC路径下的内容到容器中的dest路径下
+ADD <src> <dest>
+
+
+## 9、COPY
+该命令将复制本地主机的SRC路径下的内容到镜像中的dest路径下
+COPY <src> <dest>
+当使用本地为源目录时，推荐使用COPY
+
+## 10、ENTRYPOINT
+指定镜像的默认入口命令，该命令会在启动容器时作为根命令执行，所有传入值作为该命令的参数
+ENTRYPOINT ["executable","param1","param2"]   使用exec执行
+ENTRYPOINT command param1 param2    在/bin/sh中执行
+此时 CMD指令中的值将作为命令的参数
+注：每个Dockerfile文件只能有一条ENTRYPOINT命令，如果指定多条命令，只有最后一条会被执行，
+    如用户在启动容器时手动指定运行命令，则会覆盖ENTRYPOINT命令
+
+## 11、VOLUME
+创建一个数据挂点
+VOLUME ["/data"]
+
+## 12、USER
+指定运行容器时的用户名或UID，后续的RUN等指指令也会使用指定的用户身份。
+USER Daemon
+
+
+## 13、WORKDIR
+指定工作目录，run cmd entrypoint指令的工作目录
+WORKDIR /path/to/workdir
+
+## 14、ARG
+指定一些镜像内使用的参数（如版本号信息），这些参数在执行docker build命令时才以--build-arg <varname=value>
+
+## 15、ONBUILD
+配置当所创建的镜像作为其他镜像的基础镜像时，所执行的创建操作指令
+ONBUILD [INSTRUCTION]
+例如:
+ONBUILD ADD . /app/src
+ONBUILD RUN /usr/local/bin/python-build --dir /app/src
+
+
+## 16、STOPSIGNAL
+指定容器的退出信号
+如：STOPSIGNAL signal
+
+## 17、HEALTHCHECK
+配置所启动容器如何进行健康检测（如何判断健康与否）
+格式：
+HEALTHCHECK [OPTIONS] COM COMMAND     根据命令的返回来判断容器是否健康，0为健康，其他为不健康
+选项：
+--interval=duration(默认30s):多久检查一次
+--timeout=duration(默认30s):每次检查等待结果的超时
+--retries=N:如果失败，重试几次才最终确定失败
+
+## 18、SHELL
+指定其他命令使用的shell时的默认shell
+
+SHELL ["executable","parameters"]
+
+
+# 创建镜像
+
+docker build -t build_repo/first_image /tmp/docker_builder/
+
+-t :指定创建镜像的标签
+/tmp/docker_builder/：dockerfile文件的目录
+
+# 可以通过.dockerignore文件来忽略匹配模式路径下的目录和文件。
+
+
+
+
+
+
+

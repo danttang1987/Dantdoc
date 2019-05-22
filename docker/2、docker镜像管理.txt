@@ -1,0 +1,287 @@
+2、docker镜像管理
+
+
+#从官方拉取镜像
+docker pull 名称[:Tag]
+
+[root@docker01 default]# docker pull ubuntu:14.04
+14.04: Pulling from library/ubuntu
+d6fdcbe24ed5: Pull complete 
+1115217119d4: Pull complete 
+8180a23d2c44: Pull complete 
+ceab6b3c2a5e: Pull complete 
+Digest: sha256:b04dc5313878a8b74808d104a510e50505c79c9c11725bfdaf286f7cedb9295c
+Status: Downloaded newer image for ubuntu:14.04
+
+#如不指定名称默认为last版本
+[root@docker01 default]# docker pull ubuntu
+Using default tag: latest
+latest: Pulling from library/ubuntu
+f476d66f5408: Pull complete 
+8882c27f669e: Pull complete 
+d9af21273955: Pull complete 
+f5029279ec12: Pull complete 
+Digest: sha256:d26d529daa4d8567167181d9d569f2a85da3c5ecaf539cace2c6223355d69981
+Status: Downloaded newer image for ubuntu:latest
+
+#默认是从docker官方仓库下载，如需要从其他仓库下载需要指定下载源，如：
+docker pull hub.c.163.com/public/ubuntu:14.04
+
+
+#下载完全镜像就可以运行容器
+[root@docker01 default]# docker run -it ubuntu:14.04 bash
+	root@2e020a4a7339:/# ifconfig
+	eth0      Link encap:Ethernet  HWaddr 02:42:ac:11:00:02  
+			  inet addr:172.17.0.2  Bcast:0.0.0.0  Mask:255.255.0.0
+			  UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+			  RX packets:7 errors:0 dropped:0 overruns:0 frame:0
+			  TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+			  collisions:0 txqueuelen:0 
+			  RX bytes:586 (586.0 B)  TX bytes:0 (0.0 B)
+
+	lo        Link encap:Local Loopback  
+			  inet addr:127.0.0.1  Mask:255.0.0.0
+			  UP LOOPBACK RUNNING  MTU:65536  Metric:1
+			  RX packets:0 errors:0 dropped:0 overruns:0 frame:0
+			  TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+			  collisions:0 txqueuelen:1000 
+			  RX bytes:0 (0.0 B)  TX bytes:0 (0.0 B)
+
+	root@2e020a4a7339:/# 
+
+#查看镜像
+[root@docker01 default]# docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+ubuntu              14.04               65613486b3ef        11 days ago         188MB
+ubuntu              latest              d131e0fa2585        11 days ago         102MB
+
+
+#使用tag命令添加镜像标签
+[root@docker01 default]# docker tag ubuntu:latest myubuntu:latest
+[root@docker01 default]# docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+ubuntu              14.04               65613486b3ef        11 days ago         188MB
+myubuntu            latest              d131e0fa2585        11 days ago         102MB
+ubuntu              latest              d131e0fa2585        11 days ago         102M
+
+
+#使用inspect命令查看镜像的详细信息
+docker inspect ubuntu:14.04
+[root@docker01 default]# docker inspect ubuntu:14.04
+[
+    {
+        "Id": "sha256:65613486b3efe20ca27c045f3e52c09dd9f3dd92f927ffc2f6f4f9451a7a0b6c",
+        "RepoTags": [
+            "ubuntu:14.04"
+        ],
+        "RepoDigests": [
+            "ubuntu@sha256:b04dc5313878a8b74808d104a510e50505c79c9c11725bfdaf286f7cedb9295c"
+        ],
+        "Parent": "",
+        "Comment": "",
+        "Created": "2019-04-26T22:22:09.779342263Z",
+        "Container": "534d0c95eada11a3b7b7f347b856363bca633a6a868f28dcf2cf9575963e5ad2",
+        "ContainerConfig": {
+            "Hostname": "534d0c95eada",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            ],
+            "Cmd": [
+                "/bin/sh",
+                "-c",
+                "#(nop) ",
+                "CMD [\"/bin/bash\"]"
+            ],
+            "ArgsEscaped": true,
+            "Image": "sha256:3f935e69b26893ba47cdc4bb44819fa8f01e67311d34174ddc7bac50051a8b09",
+            "Volumes": null,
+            "WorkingDir": "",
+            "Entrypoint": null,
+            "OnBuild": null,
+            "Labels": {}
+        },
+        "DockerVersion": "18.06.1-ce",
+        "Author": "",
+        "Config": {
+            "Hostname": "",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            ],
+            "Cmd": [
+                "/bin/bash"
+            ],
+            "ArgsEscaped": true,
+            "Image": "sha256:3f935e69b26893ba47cdc4bb44819fa8f01e67311d34174ddc7bac50051a8b09",
+            "Volumes": null,
+            "WorkingDir": "",
+            "Entrypoint": null,
+            "OnBuild": null,
+            "Labels": null
+        },
+        "Architecture": "amd64",
+        "Os": "linux",
+        "Size": 188169602,
+        "VirtualSize": 188169602,
+        "GraphDriver": {
+            "Data": {
+                "RootDir": "/var/lib/docker/overlay/e5c20dfed5b2565079c6018ccc3c19aad9b0286a21471ea8f4fc6ba24097ecda/root"
+            },
+            "Name": "overlay"
+        },
+        "RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:90a7c5a737745b0269bc16fa81490e650640385fc41e99f391de6b5b6176d223",
+                "sha256:85f2c075ea3b4238a44a6f8e8e5dd0581ede1176cc1251932572d32a6c638560",
+                "sha256:012700ac7e1ca54bf2d6cf964530558e7672ebbe9042a5351116e54994d117e3",
+                "sha256:97a54d9205accc848d1927f1121e0c5f87225a37c5e5f863261ef90ce30d7361"
+            ]
+        }
+    }
+]
+[root@docker01 default]# 
+
+#可通过-f {{.RootFS.Layers}}获得指定参数的内容
+docker inspect ubuntu:14.04 -f {{.RootFS.Layers}}
+[sha256:90a7c5a737745b0269bc16fa81490e650640385fc41e99f391de6b5b6176d223 sha256:85f2c075ea3b4238a44a6f8e8e5dd0581ede1176cc1251932572d32a6c638560 sha256:012700ac7e1ca54bf2d6cf964530558e7672ebbe9042a5351116e54994d117e3 sha256:97a54d9205accc848d1927f1121e0c5f87225a37c5e5f863261ef90ce30d7361]
+
+#搜索镜像，默认从官方搜索。
+常用参数：
+--automated=true|false:仅显示自动创建的镜像，默认为否
+--no-trunc=true|false：输出信息不截断显示，默认为否
+-s 指定评价星级以上的镜像
+
+docker search --automated -s 3 nginx
+[root@docker01 default]# docker search --automated -s 3 nginx
+Flag --automated has been deprecated, use --filter=is-automated=true instead
+Flag --stars has been deprecated, use --filter=stars=3 instead
+NAME                                                   DESCRIPTION                                     STARS     OFFICIAL   AUTOMATED
+jwilder/nginx-proxy                                    Automated Nginx reverse proxy for docker c...   1595                 [OK]
+richarvey/nginx-php-fpm                                Container running Nginx + PHP-FPM capable ...   712                  [OK]
+jrcs/letsencrypt-nginx-proxy-companion                 LetsEncrypt container to use with nginx as...   508                  [OK]
+webdevops/php-nginx                                    Nginx with PHP-FPM                              125                  [OK]
+zabbix/zabbix-web-nginx-mysql                          Zabbix frontend based on Nginx web-server ...   100                  [OK]
+bitnami/nginx                                          Bitnami nginx Docker Image                      65                   [OK]
+
+#删除镜像,如一个镜像有多个标签，只会删除指定的标签不会删除对应的文件。
+docker rmi myubuntu:latest
+
+[root@docker01 default]# docker rmi myubuntu:latest
+Untagged: myubuntu:latest
+[root@docker01 default]# 
+[root@docker01 default]# 
+[root@docker01 default]# docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+ubuntu              14.04               65613486b3ef        11 days ago         188MB
+ubuntu              latest              d131e0fa2585        11 days ago         102MB
+
+# 如果镜像有容器在运行无法删除，可通过-f参数强行删除
+
+[root@docker01 default]# docker ps -a
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS                      PORTS               NAMES
+2e020a4a7339        ubuntu:14.04        "bash"              31 minutes ago      Exited (0) 29 minutes ago                       laughing_meitner
+904bc04176ef        ubuntu:14.04        "bash"              33 minutes ago      Exited (0) 31 minutes ago                       sharp_kepler
+
+[root@docker01 default]# docker rmi ubuntu:14.04
+Error response from daemon: conflict: unable to remove repository reference "ubuntu:14.04" (must force) - container 904bc04176ef is using its referenced image 65613486b3ef
+
+[root@docker01 default]# docker rmi -f ubuntu:14.04
+Untagged: ubuntu:14.04
+Untagged: ubuntu@sha256:b04dc5313878a8b74808d104a510e50505c79c9c11725bfdaf286f7cedb9295c
+Deleted: sha256:65613486b3efe20ca27c045f3e52c09dd9f3dd92f927ffc2f6f4f9451a7a0b6c
+[root@docker01 default]# 
+
+
+# 删除容器
+[root@docker01 default]# docker ps -a 
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS                      PORTS               NAMES
+2e020a4a7339        65613486b3ef        "bash"              36 minutes ago      Exited (0) 34 minutes ago                       laughing_meitner
+904bc04176ef        65613486b3ef        "bash"              37 minutes ago      Exited (0) 36 minutes ago                       sharp_kepler
+
+[root@docker01 default]# docker rm 2e020a4a7339
+2e020a4a7339
+
+[root@docker01 default]# docker rm 904bc04176ef
+904bc04176ef
+
+[root@docker01 default]# docker ps -a
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+[root@docker01 default]#
+
+
+# 创建镜像
+
+## 基于在运行的容器创建镜像
+
+docker commit [options] CONTAINER [REPOSITORY[:TAG]]
+
+options：
+-a:作者信息
+-c:提交时间
+-m:提交消息
+-p:提交时暂停容器运行
+
+
+[root@docker01 ~]# docker run -it ubuntu:14.04 /bin/bash
+root@75b37d855c2e:/# touch test
+root@75b37d855c2e:/# exit
+
+[root@docker01 ~]# docker commit -m "added new file" -a "Gene" 75b37d855c2e test:0.1
+sha256:64ef79dbf53a6cbe65b4237f2e8afdb55aacb859c2e8601b2cf22f32bfb9f802
+[root@docker01 ~]# docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+test                0.1                 64ef79dbf53a        11 seconds ago      188MB
+ubuntu              14.04               65613486b3ef        11 days ago         188MB
+ubuntu              latest              d131e0fa2585        11 days ago         102MB
+
+
+## 导入镜像
+docker import [OPTIONS] file|URL|- [REPOSITORY[:TAG]]
+
+
+# 存储和载入镜像
+## 存储导出镜像
+docker save -o file.tar imagename:tag
+
+[root@docker01 ~]# docker save -o ubuntu14.04.tar ubuntu:14.04
+[root@docker01 ~]# ls
+anaconda-ks.cfg  ks-pre.log  original-ks.cfg  ubuntu14.04.tar
+
+## 载入镜像
+docker load --input file.tar
+
+# 上传镜像
+docker push name[:tag] | [REGISTRY_HOST[:PORT]/] NAME[:TAG]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

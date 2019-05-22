@@ -1,0 +1,74 @@
+6、端口映射与容器互联
+
+多容器之间的访问提供如下两种方式：
+1、允许映射容器内的应用服务端口到本地宿主机
+2、实现多个容器间通过容器名来快速访问
+
+# 端口映射实现访问容器
+
+## 从外部访问容器应用
+  
+在创建容器时可通过-P或-p参数来指定端口映射
+-P：docker会随机映射一个49000~49900的端口到内部容器开放的网络端口
+
+[root@docker01 ~]# docker run -d -P training/webapp python app.py
+73d59dea847d0411f7312d17d68cd6685b4b14c2b1bc5e27ba16f2cbfd74b91d
+[root@docker01 ~]# docker ps -l
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS                     NAMES
+73d59dea847d        training/webapp     "python app.py"     16 seconds ago      Up 15 seconds       0.0.0.0:32768->5000/tcp   naughty_mcclintock
+
+[root@docker01 ~]# netstat -lntup
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name    
+tcp        0      0 0.0.0.0:111             0.0.0.0:*               LISTEN      1/systemd           
+tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      6679/sshd           
+tcp6       0      0 :::111                  :::*                    LISTEN      1/systemd           
+tcp6       0      0 :::22                   :::*                    LISTEN      6679/sshd           
+tcp6       0      0 :::32768                :::*                    LISTEN      7633/docker-proxy   
+udp        0      0 0.0.0.0:111             0.0.0.0:*                           1/systemd           
+udp        0      0 127.0.0.1:323           0.0.0.0:*                           6246/chronyd        
+udp        0      0 0.0.0.0:877             0.0.0.0:*                           6218/rpcbind        
+udp6       0      0 :::111                  :::*                                1/systemd           
+udp6       0      0 ::1:323                 :::*                                6246/chronyd        
+udp6       0      0 :::877                  :::*                                6218/rpcbind        
+[root@docker01 ~]# docker exec 73d5 netstat -lntup
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name
+tcp        0      0 0.0.0.0:5000            0.0.0.0:*               LISTEN      1/python        
+[root@docker01 ~]# 
+
+
+-p:可以指定要映射的端口，支持如下几种：
+IP:HostPort:ContainerPort
+IP::ContainerPort
+HostPort:ContainerPort
+
+docker run -d -p 5000:5000 -p 3000:80 training/webapp python app.py
+
+docker run -d -p 127.0.0.1:5001:5000 training/webapp python app.py
+
+docker run -d -p 127.0.0.1::5000 training/webapp python app.py
+
+## 查看端口的映射
+docker port c182b 5000
+
+
+# 互联机制实现便捷互访
+
+容器的互联（linking）是一种多个容器中的应用快速交互的方式，它会在源和接收容器之间创建连接关系。
+
+## 自定义容器名
+--name CONTAINERNAME
+
+容器名是唯一的
+
+docker run -d --name web01 training/webapp python app.py
+docker run -d --name db01 training/postgres
+
+
+## 容器互联
+
+docker run -d -P --name web02 --link db01:web02Todb01 training/webapp python app.py
+
+
+
