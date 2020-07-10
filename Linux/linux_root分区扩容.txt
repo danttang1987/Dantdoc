@@ -1,0 +1,38 @@
+场景：
+使用中的云盘在不挂载不格式化情况下进行扩容(适用于系统盘和数据盘)
+
+目录
+1、扩容物理盘
+2、安装growpart和resize2fs工具
+3、检查扩容磁盘属性
+4、使用growpart工具扩容分区
+5、使用resize2fs工具扩容文件系统
+6、检查扩容结果
+
+注意：操作之前需要对云盘进行快照或者其它方式备份，扩容云盘存在数据丢失风险
+
+1、安装软件
+	[root@A ~]# yum install cloud-utils-growpart  
+	[root@A ~]# yum install xfsprogs
+
+2、使用growpart工具扩容分区
+	growpart 是磁盘分区扩容工具
+	示例命令表示给系统盘的第一个分区扩容（是第一个分区，而不是分区名称）
+		[root@A ~]# growpart /dev/vda 1    
+		CHANGED: partition=1 start=2048 old: size=41940992 end=41943040 
+		new: size=209710462,end=209712510
+
+	若运行命令后报以下错误，您可以运行LANG=en_US.UTF-8切换ECS实例的字符编码类型。
+		[root@A~]# growpart /dev/vda 1
+		unexpected output in sfdisk --version [sfdisk，来自 util-linux 2.23.2]
+		[root@A ~]# LANG=en_US.UTF-8
+
+3、使用resize2fs工具扩容文件系统
+	resize2fs 是扩容文件系统工具
+	示例命令表示为扩容系统盘的/dev/vda1分区文件系统（ext4格式）
+
+	备注：
+	***如果您使用的是xfs文件系统，运行xfs_growfs /dev/vda1命令扩容文件系统。
+	文件系统检查命令：	
+
+	***执行命令如提示已到达最大分区时，需使用reboot重启Linux后再次执行命令
